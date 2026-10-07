@@ -8,6 +8,11 @@
  *
  * 用法：node electron/stage.cjs [--clean]
  *   --clean  强制清空 build/ 重建（默认跳过已存在且非空的 orchestrator/node_modules 以提速）
+ *
+ * 跨平台：按 process.platform 选便携运行时。
+ *   - win32 ：resources/node、resources/python、resources/sherpa-onnx/bin（扁平/exe）
+ *   - darwin：resources/node/darwin-arm64、resources/python/darwin-arm64、resources/sherpa-onnx/darwin-arm64/bin
+ *   模型/词表/流式脚本（resources/sherpa-onnx/models 与 streaming_stt.py）跨平台通用，不分平台。
  */
 const fs = require("node:fs");
 const path = require("node:path");
@@ -87,20 +92,36 @@ function main() {
   cpFile(path.join(REPO_ROOT, "AGENTS.md"), path.join(APP_DIR, "AGENTS.md"));
   cpFile(path.join(REPO_ROOT, "vibe-research.config.json"), path.join(APP_DIR, "vibe-research.config.json"));
 
-  console.log("[stage] 组装 build/resources（便携运行时）");
-  const nodeSrc = path.join(REPO_ROOT, "resources", "node");
-  if (fs.existsSync(nodeSrc)) cpDir(nodeSrc, path.join(RES_DIR, "node"));
-  else console.log("  ⚠ 未找到 resources/node（便携 Node 缺，运行时将回退系统 node）");
+  console.log("[stage] 组装 build/resources（便携运行时，按平台）");
+  const isMac = process.platform === "darwin";
 
-  const pySrc = path.join(REPO_ROOT, "resources", "python");
-  if (fs.existsSync(pySrc)) cpDir(pySrc, path.join(RES_DIR, "python"));
-  else console.log("  ⚠ 未找到 resources/python（便携 Python 缺，运行时将回退系统 python）");
+  // Node：win32 → resources/node（扁平 node.exe）；darwin → resources/node/darwin-arm64（解包后含 bin/node）
+  const nodeSrc = isMac
+    ? path.join(REPO_ROOT, "resources", "node", "darwin-arm64")
+    : path.join(REPO_ROOT, "resources", "node");
+  // dereference: true —— 运行时目录（尤其 macOS venv/node 的 bin 里是符号链接）要解引用成真实文件，
+  // 否则打包后的 resources 里会留下指向构建机绝对路径的断链。
+  if (fs.existsSync(nodeSrc)) cpDir(nodeSrc, path.join(RES_DIR, "node"), { dereference: true });
+  else console.log(`  ⚠ 未找到 ${path.relative(REPO_ROOT, nodeSrc)}（便携 Node 缺，运行时将回退系统 node）`);
 
-  // 本地离线语音识别（sherpa-onnx 二进制 + 中文模型）：打进 resources/sherpa-onnx，
-  // 后端经 VRA_SHERPA_DIR 定位（Electron 无 Web Speech 后端时语音输入走这条）。
-  const sttSrc = path.join(REPO_ROOT, "resources", "sherpa-onnx");
-  if (fs.existsSync(sttSrc)) cpDir(sttSrc, path.join(RES_DIR, "sherpa-onnx"));
-  else console.log("  ⚠ 未找到 resources/sherpa-onnx（离线语音识别缺，运行时该功能降级为打字）");
+  // Python：win32 → resources/python（扁平 python.exe）；darwin → resources/python/darwin-arm64（venv，含 bin/python3）
+  const pySrc = isMac
+    ? path.join(REPO_ROOT, "resources", "python", "darwin-arm64")
+    : path.join(REPO_ROOT, "resources", "python");
+  if (fs.existsSync(pySrc)) cpDir(pySrc, path.join(RES_DIR, "python"), { dereference: true });
+  else console.log(`  ⚠ 未找到 ${path.relative(REPO_ROOT, pySrc)}（便携 Python 缺，运行时将回退系统 python）`);
+
+  // 本地离线语音识别（sherpa-onnx）：模型/词表/流式脚本跨平台通用，识别器二进制分平台。
+  const sttRoot = path.join(REPO_ROOT, "resources", "sherpa-onnx");
+  cpFile(path.join(sttRoot, "streaming_stt.py"), path.join(RES_DIR, "sherpa-onnx", "streaming_stt.py"));
+  const sttModelsSrc = path.join(sttRoot, "models");
+  if (fs.existsSync(sttModelsSrc)) cpDir(sttModelsSrc, path.join(RES_DIR, "sherpa-onnx", "models"));
+  else console.log("  ⚠ 未找到 sherpa-onnx 模型（离线语音识别缺，运行时该功能降级为打字）");
+  // 识别器二进制：win32 → resources/sherpa-onnx/bin（sherpa-onnx-offline.exe + onnxruntime dll）；
+  // darwin → resources/sherpa-onnx/darwin-arm64/bin（sherpa-onnx-offline + dylib，来自 sherpa-onnx-bin wheel）。
+  const sttBinSrc = isMac ? path.join(sttRoot, "darwin-arm64", "bin") : path.join(sttRoot, "bin");
+  if (fs.existsSync(sttBinSrc)) cpDir(sttBinSrc, path.join(RES_DIR, "sherpa-onnx", "bin"), { dereference: true });
+  else console.log(`  ⚠ 未找到 ${path.relative(REPO_ROOT, sttBinSrc)}（sherpa-onnx 识别器二进制缺，离线语音识别降级为打字）`);
 
   console.log(`[stage] 完成，build/ 总耗时 ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 }

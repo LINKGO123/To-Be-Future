@@ -11,7 +11,7 @@
  *   5) 本进程内置一个最小 HTTP 服务：serve `desktop/dist`（SPA）+ 把 `/api/*` 反代到后端
  *      并注入 Bearer token（复刻 Vite dev proxy 语义，token 永不进浏览器）；
  *   6) 轮询后端 `/health`（带 token）直到 ok 或 30s 超时，超时弹可见错误窗口；
- *   7) 退出清理：`before-quit` 异步 `taskkill /T /F` 杀掉后端子进程树（不阻塞退出），
+ *   7) 退出清理：`before-quit` 异步杀后端子进程树（win32=`taskkill /T /F`，darwin/linux=`kill(-pid)`；不阻塞退出），
  *      `will-quit` 显式 `app.releaseSingleInstanceLock()`；后端由守护层保证"主进程死亡即自杀"。
  *
  * 硬约束：本文件不写死任何源码绝对路径，一律用 `process.resourcesPath` / `__dirname` 相对定位。
@@ -38,6 +38,7 @@ const net = require("node:net");
 app.setName("fund-radar-desktop");
 
 const IS_PACKAGED = app.isPackaged;
+const IS_WIN = process.platform === "win32";
 
 // 路径定位（不写死源码绝对路径）：
 //   - 打包后：仓库内容在 `resources/app`，便携运行时在 `resources/{node,python}`；
@@ -49,8 +50,15 @@ const RESOURCES_DIR = IS_PACKAGED
   ? process.resourcesPath
   : path.join(APP_ROOT, "resources");
 
-const NODE_EXE = path.join(RESOURCES_DIR, "node", "node.exe");
-const PYTHON_EXE = path.join(RESOURCES_DIR, "python", "python.exe");
+// 便携运行时按平台定位（electron/stage.cjs 已把对应平台运行时摊平到 resources/{node,python}）：
+//   - win32  → node.exe / python.exe（扁平布局）
+//   - darwin → bin/node / bin/python3（Node 官方 tarball、venv 布局）
+const NODE_EXE = IS_WIN
+  ? path.join(RESOURCES_DIR, "node", "node.exe")
+  : path.join(RESOURCES_DIR, "node", "bin", "node");
+const PYTHON_EXE = IS_WIN
+  ? path.join(RESOURCES_DIR, "python", "python.exe")
+  : path.join(RESOURCES_DIR, "python", "bin", "python3");
 
 const API_BASE_PORT = 8765;
 const UI_BASE_PORT = 5930;
@@ -106,11 +114,14 @@ function resolveNode() {
 
 function resolvePython() {
   if (fs.existsSync(PYTHON_EXE)) return PYTHON_EXE;
-  // 开发回退：仓库内 .venv
-  const venv = path.join(APP_ROOT, ".venv", "Scripts", "python.exe");
+  // 开发回退：仓库内 .venv（Windows 在 Scripts/，macOS/Linux 在 bin/）
+  const venv = IS_WIN
+    ? path.join(APP_ROOT, ".venv", "Scripts", "python.exe")
+    : path.join(APP_ROOT, ".venv", "bin", "python3");
   if (fs.existsSync(venv)) return venv;
-  log("warn", `未找到便携 Python：${PYTHON_EXE}，回退 PATH 上的 python`);
-  return "python";
+  const fallback = IS_WIN ? "python" : "python3";
+  log("warn", `未找到便携 Python：${PYTHON_EXE}，回退 PATH 上的 ${fallback}`);
+  return fallback;
 }
 
 /* ---------------- 空闲端口 ---------------- */
@@ -136,40 +147,68 @@ function findFreePort(start) {
 /* ---------------- 进程树清理 ---------------- */
 function killProcessTree(pid) {
   if (!pid) return;
-  try {
-    // 异步 taskkill：不再用 spawnSync 同步阻塞主进程退出。
-    // 此前 spawnSync + timeout 8000 最长会卡住 app.quit() 8 秒，导致单实例锁
-    // 释放延迟 —— 用户关窗后立刻再点会拿不到锁而"打不开"。
-    const taskkill = spawn("taskkill.exe", ["/PID", String(pid), "/T", "/F"], {
-      windowsHide: true,
-      stdio: "ignore",
-    });
-    taskkill.on("error", (err) => log("warn", `taskkill 失败:${err.message}`));
-    // 不让 taskkill 子进程句柄拖住主进程事件循环；它是独立 OS 进程，会自行完成清理。
-    taskkill.unref();
-  } catch (e) {
-    log("warn", `taskkill 异常:${e && e.message ? e.message : String(e)}`);
+  if (IS_WIN) {
+    try {
+      // 异步 taskkill：不再用 spawnSync 同步阻塞主进程退出。
+      // 此前 spawnSync + timeout 8000 最长会卡住 app.quit() 8 秒，导致单实例锁
+      // 释放延迟 —— 用户关窗后立刻再点会拿不到锁而"打不开"。
+      const taskkill = spawn("taskkill.exe", ["/PID", String(pid), "/T", "/F"], {
+        windowsHide: true,
+        stdio: "ignore",
+      });
+      taskkill.on("error", (err) => log("warn", `taskkill 失败:${err.message}`));
+      // 不让 taskkill 子进程句柄拖住主进程事件循环；它是独立 OS 进程，会自行完成清理。
+      taskkill.unref();
+    } catch (e) {
+      log("warn", `taskkill 异常:${e && e.message ? e.message : String(e)}`);
+    }
+    return;
   }
+  // darwin / linux：守护进程由主进程以 detached 启动、自成一进程组（PGID == 守护进程 PID），
+  // 后端在其组内。用负 pid 杀整组 = 守护层 + 后端（后端自带 SIGTERM 处理器，会顺带清理
+  // 它自己 detach 出的研究/CLI 子进程树）。先温和 SIGTERM，2 秒后 SIGKILL 兜底。
+  try {
+    process.kill(-pid, "SIGTERM");
+  } catch (e) {
+    if (e && e.code === "ESRCH") return; // 进程组已不存在
+    log("warn", `kill(-${pid}, SIGTERM) 失败:${e && e.message ? e.message : String(e)}`);
+  }
+  const t = setTimeout(() => {
+    try { process.kill(-pid, "SIGKILL"); } catch { /* 已退出 */ }
+  }, 2000);
+  t.unref();
 }
 
 /* 守护脚本：由主进程用 `node -e` 启动，作为后端的"父进程死亡即自杀"守护层。
  * 原理：主进程给守护进程的 stdin 开一条管道且从不写入、也不关闭；主进程一旦退出
  * （无论正常还是被强杀），OS 关闭该管道写端 → 守护进程 stdin 收到 close → 立即
- * taskkill 掉后端整棵树，避免残留孤儿 node/python 进程。
- * 后端真实参数经 argv 透传；环境变量（含 token）走 env 继承，不进命令行，避免泄露。 */
+ * 杀掉后端整棵树，避免残留孤儿 node/python 进程。
+ * 后端真实参数经 argv 透传；环境变量（含 token）走 env 继承，不进命令行，避免泄露。
+ * 跨平台：win32 用 taskkill /T /F（保持原有行为）；darwin/linux 用 POSIX 信号
+ * （SIGTERM 温和收尾 + SIGKILL 兜底，后端自带信号处理器会清理其子进程树）。 */
 const GUARDIAN_SCRIPT = [
   'const { spawn, spawnSync } = require("node:child_process");',
   'let child = null;',
   'let killing = false;',
+  'const IS_WIN = process.platform === "win32";',
   'function killTree() {',
   '  if (!child || child.exitCode !== null) return;',
-  '  try { spawnSync("taskkill.exe", ["/PID", String(child.pid), "/T", "/F"], { windowsHide: true, stdio: "ignore", timeout: 4000 }); } catch (e) {}',
+  '  try {',
+  '    if (IS_WIN) {',
+  '      spawnSync("taskkill.exe", ["/PID", String(child.pid), "/T", "/F"], { windowsHide: true, stdio: "ignore", timeout: 4000 });',
+  '    } else {',
+  '      // 后端有 SIGTERM 处理器（会清理它自己 detach 出的研究/CLI 子进程），只发温和信号；2 秒后 SIGKILL 兜底。',
+  '      try { child.kill("SIGTERM"); } catch (e) {}',
+  '      setTimeout(function () { try { child.kill("SIGKILL"); } catch (e) {} }, 2000).unref();',
+  '    }',
+  '  } catch (e) {}',
   '}',
   'function onParentGone() {',
   '  if (killing) return;',
   '  killing = true;',
   '  killTree();',
-  '  process.exit(0);',
+  '  if (IS_WIN) { process.exit(0); }',
+  '  else { setTimeout(function () { process.exit(0); }, 2200).unref(); }',
   '}',
   'try {',
   '  child = spawn(process.execPath, [process.argv[1]].concat(process.argv.slice(2)), {',
@@ -185,6 +224,12 @@ const GUARDIAN_SCRIPT = [
   'process.stdin.on("end", onParentGone);',
   'process.stdin.on("close", onParentGone);',
   'process.stdin.on("error", function () {});',
+  // POSIX：主进程 killProcessTree 会 SIGTERM 到守护进程（进程组内），或终端/系统发信号时，
+  // 同样先杀后端再退出，避免只杀到守护进程而留下孤儿后端。
+  'if (!IS_WIN) {',
+  '  process.on("SIGTERM", onParentGone);',
+  '  process.on("SIGINT", onParentGone);',
+  '}',
   'child.on("error", function () { process.exit(1); });',
   'child.on("exit", function (code) { if (killing) return; process.exit(code == null ? 1 : code); });',
 ].join("\n");
@@ -206,10 +251,11 @@ function spawnBackend(port, token) {
     VRA_PYTHON: python,
     // 本地离线语音识别资产（sherpa-onnx 二进制 + 中文模型）：打包后位于 resources/sherpa-onnx
     VRA_SHERPA_DIR: path.join(RESOURCES_DIR, "sherpa-onnx"),
-    // 让便携解释器目录也在 PATH 里（后端 python3 兜底 / 脚本子进程可复用）
+    // 让便携解释器目录也在 PATH 里（后端 python3 兜底 / 脚本子进程可复用）。
+    // 回退到裸命令名（"node"/"python"/"python3"）时不塞目录，避免把当前目录 "." 加进 PATH。
     PATH: [
-      path.dirname(node === "node" ? "node" : node),
-      path.dirname(python === "python" ? "python" : python),
+      node === "node" ? "" : path.dirname(node),
+      (python === "python" || python === "python3") ? "" : path.dirname(python),
       process.env.PATH || "",
     ].filter(Boolean).join(path.delimiter),
   };
@@ -223,6 +269,9 @@ function spawnBackend(port, token) {
     cwd: APP_ROOT,
     env,
     windowsHide: true,
+    // POSIX：守护进程 detached 自成进程组（PGID == 守护进程 PID），便于 killProcessTree
+    // 用 kill(-pid) 杀整棵进程树；Windows 保持 false，沿用 taskkill /T 语义，不改现有行为。
+    detached: !IS_WIN,
     // stdin 用 pipe（守护层的"父进程存活"心跳）：主进程从不写入也从不关闭它。
     stdio: ["pipe", outFd, errFd],
   });

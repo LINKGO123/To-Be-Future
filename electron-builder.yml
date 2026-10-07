@@ -1,9 +1,10 @@
-# To Be Future 资金雷达工作台 · electron-builder 配置（Windows 安装版 · NSIS）
+# To Be Future 资金雷达工作台 · electron-builder 配置（Windows NSIS + macOS DMG）
 # 与浏览器模式 `启动资金雷达.ps1` 并存；不改 orchestrator/calc/datasources 业务逻辑。
 # 打包结构：
 #   app.asar                 ← 仅 Electron 壳（main.cjs / preload.cjs）
 #   resources/app/           ← 仓库运行内容（由 electron/stage.cjs 摊平到 build/app）
-#   resources/{node,python}  ← 便携运行时（由 electron/stage.cjs 摊平到 build/resources）
+#   resources/{node,python}  ← 便携运行时（由 electron/stage.cjs 按平台摊平到 build/resources）
+# Windows 在 Windows 机器上跑；macOS 在 Mac 上跑（stage.cjs 会按 process.platform 选对应运行时）。
 appId: com.tobefuture.fundradar
 productName: "To Be Future 资金雷达"
 copyright: "To Be Future"
@@ -36,6 +37,21 @@ win:
   # 图标：提供 256x256 的 PNG 会自动生成 .ico（`node electron/generate-icon.cjs` 可生成 build/icon.png）。
   icon: build/icon.png
 
+mac:
+  # Apple Silicon（arm64），不签名：家人首次右键「打开」绕过 Gatekeeper「未验证开发者」拦截。
+  target:
+    - target: dmg
+      arch:
+        - arm64
+  # 不签名：identity 显式置 null，electron-builder 跳过 codesign（否则会在 Mac 上找签名身份并报错）。
+  identity: null
+  # Mac 需要 .icns 图标：先在 Mac 上跑 scripts/make-icns.sh 生成 build/icon.icns。
+  # （electron-builder 也接受 512x512+ 的 PNG 并自动转 icns，但 256 的 build/icon.png 偏小，建议先生成 icns。）
+  icon: build/icon.icns
+  category: public.app-category.finance
+  # 产物名：区分平台/架构，便于与 Windows 安装包并列分发。
+  artifactName: "${productName}-${version}-mac-${arch}.${ext}"
+
 nsis:
   # 向导式安装：可选安装目录（家人可装到 D 盘等任意有写权限的位置），免管理员权限。
   oneClick: false
@@ -55,9 +71,11 @@ buildDependenciesFromSource: false
 # 自动更新发布（electron-updater · GitHub Releases）
 # ⚠️ 发布前填真实 owner / repo（当前为占位）：否则安装包内的 app-update.yml 会指向
 #    占位仓库，自动更新检查会失败（失败为静默，不影响应用正常启动）。
-# 发布命令示例（生成 GitHub Release + latest.yml 并上传安装包）：
+# 发布命令示例（生成 GitHub Release + latest.yml/latest-mac.yml 并上传安装包）：
 #   npx electron-builder --win nsis --publish always    # 需提供 GH_TOKEN 环境变量
-# 未签名：electron-updater 的 NSIS 更新链路仍可用，但 Windows SmartScreen 会告警（已知，接受）。
+#   npx electron-builder --mac dmg  --publish always    # 同上（Mac 上执行）
+# 未签名：electron-updater 的 NSIS/dmg 更新链路仍可用；Windows SmartScreen 会告警、
+# macOS Gatekeeper 首次需右键「打开」（已知，接受）。
 publish:
   provider: github
   owner: "LINKGO123"

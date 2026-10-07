@@ -9,7 +9,8 @@
   "scripts": {
     "electron:dev": "electron .",
     "electron:build": "node electron/stage.cjs && electron-builder --win nsis",
-    "electron:build:clean": "node electron/stage.cjs --clean && electron-builder --win nsis"
+    "electron:build:clean": "node electron/stage.cjs --clean && electron-builder --win nsis",
+    "electron:build:mac": "node electron/stage.cjs --clean && electron-builder --mac dmg"
   },
   "devDependencies": {
     "electron": "^44.5.1",
