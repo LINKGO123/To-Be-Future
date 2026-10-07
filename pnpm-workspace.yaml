@@ -1,0 +1,7 @@
+# 根目录 pnpm 设置（Electron 打包壳用；desktop/ 与 orchestrator/ 各自有独立 workspace，不受影响）。
+# pnpm ≥10 用 allowBuilds 显式放行需要跑安装脚本的包；electron 的 postinstall 负责下载二进制，
+# electron-winstaller 是 electron-builder 的传递依赖。不显式放行会触发 ERR_PNPM_IGNORED_BUILDS 使
+# `pnpm install`（electron-builder 内部也会调它）退出 1。
+allowBuilds:
+  electron: true
+  electron-winstaller: true

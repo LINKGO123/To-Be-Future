@@ -1,0 +1,711 @@
+{
+  "_comment": "手算 fixture:每条 = 函数 / 输入 / 期望状态 / 期望值(容差 1e-6) / 期望 details 子集。期望值由人工按《刀2规格-calc函数与skill提示词-v1.0.md》§一手算,不是由代码生成。",
+  "cases": [
+    {
+      "name": "heat_score 正常: 10家涨停+5.5亿+4板=45.0",
+      "function": "heat_score",
+      "args": {"zt_count": 10, "flow_yi": 5.5, "height": 4},
+      "expect_status": "ok",
+      "expect_value": 45.0,
+      "expect_details": {"zt_term": 30.0, "flow_term": 11.0, "height_term": 4.0}
+    },
+    {
+      "name": "heat_score 正常: 资金净流出照实扣减",
+      "function": "heat_score",
+      "args": {"zt_count": 3, "flow_yi": -2.0, "height": 1},
+      "expect_status": "ok",
+      "expect_value": 6.0
+    },
+    {
+      "name": "heat_score 正常: 全零输入",
+      "function": "heat_score",
+      "args": {"zt_count": 0, "flow_yi": 0.0, "height": 0},
+      "expect_status": "ok",
+      "expect_value": 0.0
+    },
+    {
+      "name": "heat_score 正常: 负热度照实报告不截断",
+      "function": "heat_score",
+      "args": {"zt_count": 0, "flow_yi": -5.0, "height": 0},
+      "expect_status": "ok",
+      "expect_value": -10.0
+    },
+    {
+      "name": "heat_score 边界: 保留1位小数",
+      "function": "heat_score",
+      "args": {"zt_count": 0, "flow_yi": 1.05, "height": 0},
+      "expect_status": "ok",
+      "expect_value": 2.1
+    },
+    {
+      "name": "heat_score 边界: 半值银行家舍入取偶",
+      "function": "heat_score",
+      "args": {"zt_count": 0, "flow_yi": 1.125, "height": 0},
+      "expect_status": "ok",
+      "expect_value": 2.2
+    },
+    {
+      "name": "heat_score 边界: 最高板为0",
+      "function": "heat_score",
+      "args": {"zt_count": 1, "flow_yi": 0.0, "height": 0},
+      "expect_status": "ok",
+      "expect_value": 3.0
+    },
+    {
+      "name": "heat_score 异常域: zt_count 为 None",
+      "function": "heat_score",
+      "args": {"zt_count": null, "flow_yi": 1.0, "height": 1},
+      "expect_status": "not_meaningful"
+    },
+    {
+      "name": "heat_score 异常域: flow_yi 为 None",
+      "function": "heat_score",
+      "args": {"zt_count": 1, "flow_yi": null, "height": 1},
+      "expect_status": "not_meaningful"
+    },
+    {
+      "name": "heat_score 异常域: height 为 None",
+      "function": "heat_score",
+      "args": {"zt_count": 1, "flow_yi": 1.0, "height": null},
+      "expect_status": "not_meaningful"
+    },
+    {
+      "name": "heat_score 异常域: 三个输入都为 None",
+      "function": "heat_score",
+      "args": {"zt_count": null, "flow_yi": null, "height": null},
+      "expect_status": "not_meaningful"
+    },
+    {
+      "name": "heat_score error: zt_count 为负",
+      "function": "heat_score",
+      "args": {"zt_count": -1, "flow_yi": 1.0, "height": 1},
+      "expect_status": "error"
+    },
+    {
+      "name": "heat_score error: zt_count 非整数",
+      "function": "heat_score",
+      "args": {"zt_count": 2.5, "flow_yi": 1.0, "height": 1},
+      "expect_status": "error"
+    },
+    {
+      "name": "heat_score error: zt_count 布尔",
+      "function": "heat_score",
+      "args": {"zt_count": true, "flow_yi": 1.0, "height": 1},
+      "expect_status": "error"
+    },
+    {
+      "name": "heat_score error: flow_yi 非数值",
+      "function": "heat_score",
+      "args": {"zt_count": 1, "flow_yi": "x", "height": 1},
+      "expect_status": "error"
+    },
+    {
+      "name": "heat_score error: flow_yi 非有限",
+      "function": "heat_score",
+      "args": {"zt_count": 1, "flow_yi": 1e309, "height": 1},
+      "expect_status": "error"
+    },
+    {
+      "name": "heat_score error: height 为负",
+      "function": "heat_score",
+      "args": {"zt_count": 1, "flow_yi": 1.0, "height": -1},
+      "expect_status": "error"
+    },
+    {
+      "name": "zscore20 正常: 基线10个0+10个2,当日3.5,z=2.5",
+      "function": "zscore20",
+      "args": {"series": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3.5]},
+      "expect_status": "ok",
+      "expect_value": 2.5,
+      "expect_details": {"mu": 1.0, "sigma": 1.0, "n": 21}
+    },
+    {
+      "name": "zscore20 正常: 当日大幅流出,负z照实报告",
+      "function": "zscore20",
+      "args": {"series": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, -2.0]},
+      "expect_status": "ok",
+      "expect_value": -3.0,
+      "expect_details": {"mu": 1.0, "sigma": 1.0, "n": 21}
+    },
+    {
+      "name": "zscore20 正常: 1..20 基线,当日等于均值,z=0",
+      "function": "zscore20",
+      "args": {"series": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 10.5]},
+      "expect_status": "ok",
+      "expect_value": 0.0,
+      "expect_details": {"mu": 10.5, "sigma": 5.766, "n": 21}
+    },
+    {
+      "name": "zscore20 边界: 恰好21个元素(最小合法长度),当日等于均值",
+      "function": "zscore20",
+      "args": {"series": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1.0]},
+      "expect_status": "ok",
+      "expect_value": 0.0
+    },
+    {
+      "name": "zscore20 边界: z 恰为 3.0",
+      "function": "zscore20",
+      "args": {"series": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 4.0]},
+      "expect_status": "ok",
+      "expect_value": 3.0
+    },
+    {
+      "name": "zscore20 边界: z 恰为 -2.0",
+      "function": "zscore20",
+      "args": {"series": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, -1.0]},
+      "expect_status": "ok",
+      "expect_value": -2.0
+    },
+    {
+      "name": "zscore20 异常域: 长度20,基线不足",
+      "function": "zscore20",
+      "args": {"series": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]},
+      "expect_status": "not_meaningful"
+    },
+    {
+      "name": "zscore20 异常域: 空序列",
+      "function": "zscore20",
+      "args": {"series": []},
+      "expect_status": "not_meaningful"
+    },
+    {
+      "name": "zscore20 异常域: 长度1",
+      "function": "zscore20",
+      "args": {"series": [1.0]},
+      "expect_status": "not_meaningful"
+    },
+    {
+      "name": "zscore20 异常域: 21个相同值,sigma为0",
+      "function": "zscore20",
+      "args": {"series": [5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0]},
+      "expect_status": "not_meaningful"
+    },
+    {
+      "name": "zscore20 异常域: 全零序列,sigma为0",
+      "function": "zscore20",
+      "args": {"series": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]},
+      "expect_status": "not_meaningful"
+    },
+    {
+      "name": "zscore20 error: series 非列表",
+      "function": "zscore20",
+      "args": {"series": "abc"},
+      "expect_status": "error"
+    },
+    {
+      "name": "zscore20 error: 含布尔元素",
+      "function": "zscore20",
+      "args": {"series": [true, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1.0]},
+      "expect_status": "error"
+    },
+    {
+      "name": "zscore20 error: 含字符串元素",
+      "function": "zscore20",
+      "args": {"series": ["x", 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1.0]},
+      "expect_status": "error"
+    },
+    {
+      "name": "zscore20 error: 含 None 元素",
+      "function": "zscore20",
+      "args": {"series": [null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1.0]},
+      "expect_status": "error"
+    },
+    {
+      "name": "zscore20 error: 含非有限元素",
+      "function": "zscore20",
+      "args": {"series": [1e309, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1.0]},
+      "expect_status": "error"
+    },
+    {
+      "name": "zscore20 error: 长度22超出契约输入域",
+      "function": "zscore20",
+      "args": {"series": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1.0, 9.0]},
+      "expect_status": "error"
+    },
+    {
+      "name": "pnl 正常: 当日盈利且累计盈利",
+      "function": "pnl",
+      "args": {"cost": 10.5, "qty": 1000, "price": 11.25, "prev_close": 11.0},
+      "expect_status": "ok",
+      "expect_value": 250.0,
+      "expect_details": {"today_pnl": 250.0, "cum_pnl": 750.0, "cum_pct": 7.1}
+    },
+    {
+      "name": "pnl 正常: 当日亏且累计浮亏",
+      "function": "pnl",
+      "args": {"cost": 20.0, "qty": 500, "price": 19.0, "prev_close": 19.5},
+      "expect_status": "ok",
+      "expect_value": -250.0,
+      "expect_details": {"today_pnl": -250.0, "cum_pnl": -500.0, "cum_pct": -5.0}
+    },
+    {
+      "name": "pnl 正常: 百分比保留1位小数",
+      "function": "pnl",
+      "args": {"cost": 8.66, "qty": 300, "price": 9.0, "prev_close": 8.9},
+      "expect_status": "ok",
+      "expect_value": 30.0,
+      "expect_details": {"today_pnl": 30.0, "cum_pnl": 102.0, "cum_pct": 3.9}
+    },
+    {
+      "name": "pnl 边界: 现价等于成本,累计盈亏为0",
+      "function": "pnl",
+      "args": {"cost": 12.34, "qty": 100, "price": 12.34, "prev_close": 12.0},
+      "expect_status": "ok",
+      "expect_value": 34.0,
+      "expect_details": {"today_pnl": 34.0, "cum_pnl": 0.0, "cum_pct": 0.0}
+    },
+    {
+      "name": "pnl 边界: 现价等于昨收,今日盈亏为0",
+      "function": "pnl",
+      "args": {"cost": 12.34, "qty": 100, "price": 12.0, "prev_close": 12.0},
+      "expect_status": "ok",
+      "expect_value": 0.0,
+      "expect_details": {"today_pnl": 0.0, "cum_pnl": -34.0, "cum_pct": -2.8}
+    },
+    {
+      "name": "pnl 边界: 1股最小数量",
+      "function": "pnl",
+      "args": {"cost": 10.0, "qty": 1, "price": 10.05, "prev_close": 10.0},
+      "expect_status": "ok",
+      "expect_value": 0.05,
+      "expect_details": {"today_pnl": 0.05, "cum_pnl": 0.05, "cum_pct": 0.5}
+    },
+    {
+      "name": "pnl 异常域: cost 为 0",
+      "function": "pnl",
+      "args": {"cost": 0, "qty": 100, "price": 10.0, "prev_close": 9.9},
+      "expect_status": "not_meaningful"
+    },
+    {
+      "name": "pnl 异常域: cost 为负",
+      "function": "pnl",
+      "args": {"cost": -5, "qty": 100, "price": 10.0, "prev_close": 9.9},
+      "expect_status": "not_meaningful"
+    },
+    {
+      "name": "pnl 异常域: cost 为负小数",
+      "function": "pnl",
+      "args": {"cost": -0.01, "qty": 100, "price": 10.0, "prev_close": 9.9},
+      "expect_status": "not_meaningful"
+    },
+    {
+      "name": "pnl error: qty 为负",
+      "function": "pnl",
+      "args": {"cost": 10.0, "qty": -1, "price": 10.0, "prev_close": 9.9},
+      "expect_status": "error"
+    },
+    {
+      "name": "pnl error: qty 非整数",
+      "function": "pnl",
+      "args": {"cost": 10.0, "qty": 2.5, "price": 10.0, "prev_close": 9.9},
+      "expect_status": "error"
+    },
+    {
+      "name": "pnl error: qty 为 None",
+      "function": "pnl",
+      "args": {"cost": 10.0, "qty": null, "price": 10.0, "prev_close": 9.9},
+      "expect_status": "error"
+    },
+    {
+      "name": "pnl error: qty 布尔",
+      "function": "pnl",
+      "args": {"cost": 10.0, "qty": true, "price": 10.0, "prev_close": 9.9},
+      "expect_status": "error"
+    },
+    {
+      "name": "pnl error: cost 为 None",
+      "function": "pnl",
+      "args": {"cost": null, "qty": 100, "price": 10.0, "prev_close": 9.9},
+      "expect_status": "error"
+    },
+    {
+      "name": "pnl error: cost 非数值",
+      "function": "pnl",
+      "args": {"cost": "x", "qty": 100, "price": 10.0, "prev_close": 9.9},
+      "expect_status": "error"
+    },
+    {
+      "name": "pnl error: price 为 None",
+      "function": "pnl",
+      "args": {"cost": 10.0, "qty": 100, "price": null, "prev_close": 9.9},
+      "expect_status": "error"
+    },
+    {
+      "name": "pnl error: prev_close 非有限",
+      "function": "pnl",
+      "args": {"cost": 10.0, "qty": 100, "price": 10.0, "prev_close": 1e309},
+      "expect_status": "error"
+    },
+    {
+      "name": "anomaly_judge 正常: fund_z 3.2 触发 strong",
+      "function": "anomaly_judge",
+      "args": {"fund_z": 3.2, "turnover_pctile": 50.0, "vol_z": 1.0, "board_ratio": 1.0, "zhapu_rate": 10.0, "ladder_delta": 0},
+      "expect_status": "ok",
+      "expect_value": 1,
+      "expect_details": {"level": "strong", "triggers": [{"dim": "fund_z", "value": 3.2, "rule": "|fund_z| ≥ 3"}]}
+    },
+    {
+      "name": "anomaly_judge 正常: board_ratio 3.0 触发 strong",
+      "function": "anomaly_judge",
+      "args": {"fund_z": 1.0, "turnover_pctile": 50.0, "vol_z": 1.0, "board_ratio": 3.0, "zhapu_rate": 10.0, "ladder_delta": 0},
+      "expect_status": "ok",
+      "expect_value": 1,
+      "expect_details": {"level": "strong", "triggers": [{"dim": "board_ratio", "value": 3.0, "rule": "board_ratio ≥ 3"}]}
+    },
+    {
+      "name": "anomaly_judge 正常: zhapu_rate 46 触发 strong",
+      "function": "anomaly_judge",
+      "args": {"fund_z": 1.0, "turnover_pctile": 50.0, "vol_z": 1.0, "board_ratio": 1.0, "zhapu_rate": 46.0, "ladder_delta": 0},
+      "expect_status": "ok",
+      "expect_value": 1,
+      "expect_details": {"level": "strong", "triggers": [{"dim": "zhapu_rate", "value": 46.0, "rule": "zhapu_rate ≥ 45"}]}
+    },
+    {
+      "name": "anomaly_judge 正常: 负 fund_z 大额流出照实触发 strong",
+      "function": "anomaly_judge",
+      "args": {"fund_z": -3.5, "turnover_pctile": 50.0, "vol_z": 1.0, "board_ratio": 1.0, "zhapu_rate": 10.0, "ladder_delta": 0},
+      "expect_status": "ok",
+      "expect_value": 1,
+      "expect_details": {"level": "strong", "triggers": [{"dim": "fund_z", "value": -3.5, "rule": "|fund_z| ≥ 3"}]}
+    },
+    {
+      "name": "anomaly_judge 正常: 六维全部触发 strong",
+      "function": "anomaly_judge",
+      "args": {"fund_z": 3.2, "turnover_pctile": 91.0, "vol_z": 2.7, "board_ratio": 3.1, "zhapu_rate": 50.0, "ladder_delta": 2},
+      "expect_status": "ok",
+      "expect_value": 6,
+      "expect_details": {"level": "strong", "triggers": [
+        {"dim": "fund_z", "value": 3.2, "rule": "|fund_z| ≥ 3"},
+        {"dim": "turnover_pctile", "value": 91.0, "rule": "turnover_pctile ≥ 90"},
+        {"dim": "vol_z", "value": 2.7, "rule": "vol_z ≥ 2.5"},
+        {"dim": "board_ratio", "value": 3.1, "rule": "board_ratio ≥ 3"},
+        {"dim": "zhapu_rate", "value": 50.0, "rule": "zhapu_rate ≥ 45"},
+        {"dim": "ladder_delta", "value": 2, "rule": "|ladder_delta| ≥ 2"}
+      ]}
+    },
+    {
+      "name": "anomaly_judge 正常: fund_z 2.3 触发 normal",
+      "function": "anomaly_judge",
+      "args": {"fund_z": 2.3, "turnover_pctile": 50.0, "vol_z": 1.0, "board_ratio": 1.0, "zhapu_rate": 10.0, "ladder_delta": 0},
+      "expect_status": "ok",
+      "expect_value": 1,
+      "expect_details": {"level": "normal", "triggers": [{"dim": "fund_z", "value": 2.3, "rule": "|fund_z| ≥ 2"}]}
+    },
+    {
+      "name": "anomaly_judge 正常: turnover_pctile 92 触发 normal",
+      "function": "anomaly_judge",
+      "args": {"fund_z": 1.0, "turnover_pctile": 92.0, "vol_z": 1.0, "board_ratio": 1.0, "zhapu_rate": 10.0, "ladder_delta": 0},
+      "expect_status": "ok",
+      "expect_value": 1,
+      "expect_details": {"level": "normal", "triggers": [{"dim": "turnover_pctile", "value": 92.0, "rule": "turnover_pctile ≥ 90"}]}
+    },
+    {
+      "name": "anomaly_judge 正常: vol_z 2.6 触发 normal",
+      "function": "anomaly_judge",
+      "args": {"fund_z": 1.0, "turnover_pctile": 50.0, "vol_z": 2.6, "board_ratio": 1.0, "zhapu_rate": 10.0, "ladder_delta": 0},
+      "expect_status": "ok",
+      "expect_value": 1,
+      "expect_details": {"level": "normal", "triggers": [{"dim": "vol_z", "value": 2.6, "rule": "vol_z ≥ 2.5"}]}
+    },
+    {
+      "name": "anomaly_judge 正常: board_ratio 2.2 触发 normal",
+      "function": "anomaly_judge",
+      "args": {"fund_z": 1.0, "turnover_pctile": 50.0, "vol_z": 1.0, "board_ratio": 2.2, "zhapu_rate": 10.0, "ladder_delta": 0},
+      "expect_status": "ok",
+      "expect_value": 1,
+      "expect_details": {"level": "normal", "triggers": [{"dim": "board_ratio", "value": 2.2, "rule": "board_ratio ≥ 2"}]}
+    },
+    {
+      "name": "anomaly_judge 正常: ladder_delta -2 触发 normal",
+      "function": "anomaly_judge",
+      "args": {"fund_z": 1.0, "turnover_pctile": 50.0, "vol_z": 1.0, "board_ratio": 1.0, "zhapu_rate": 10.0, "ladder_delta": -2},
+      "expect_status": "ok",
+      "expect_value": 1,
+      "expect_details": {"level": "normal", "triggers": [{"dim": "ladder_delta", "value": -2, "rule": "|ladder_delta| ≥ 2"}]}
+    },
+    {
+      "name": "anomaly_judge 正常: 均不触发为 none",
+      "function": "anomaly_judge",
+      "args": {"fund_z": 1.9, "turnover_pctile": 89.9, "vol_z": 2.4, "board_ratio": 1.9, "zhapu_rate": 44.9, "ladder_delta": 1},
+      "expect_status": "ok",
+      "expect_value": 0,
+      "expect_details": {"level": "none", "triggers": []}
+    },
+    {
+      "name": "anomaly_judge 正常: 全零输入为 none",
+      "function": "anomaly_judge",
+      "args": {"fund_z": 0.0, "turnover_pctile": 0.0, "vol_z": 0.0, "board_ratio": 0.0, "zhapu_rate": 0.0, "ladder_delta": 0},
+      "expect_status": "ok",
+      "expect_value": 0,
+      "expect_details": {"level": "none", "triggers": []}
+    },
+    {
+      "name": "anomaly_judge 边界: fund_z 恰为 3.0 触发 strong",
+      "function": "anomaly_judge",
+      "args": {"fund_z": 3.0, "turnover_pctile": 50.0, "vol_z": 1.0, "board_ratio": 1.0, "zhapu_rate": 10.0, "ladder_delta": 0},
+      "expect_status": "ok",
+      "expect_value": 1,
+      "expect_details": {"level": "strong"}
+    },
+    {
+      "name": "anomaly_judge 边界: fund_z 恰为 2.0 触发 normal",
+      "function": "anomaly_judge",
+      "args": {"fund_z": 2.0, "turnover_pctile": 50.0, "vol_z": 1.0, "board_ratio": 1.0, "zhapu_rate": 10.0, "ladder_delta": 0},
+      "expect_status": "ok",
+      "expect_value": 1,
+      "expect_details": {"level": "normal"}
+    },
+    {
+      "name": "anomaly_judge 边界: board_ratio 恰为 3.0 触发 strong",
+      "function": "anomaly_judge",
+      "args": {"fund_z": 1.0, "turnover_pctile": 50.0, "vol_z": 1.0, "board_ratio": 3.0, "zhapu_rate": 10.0, "ladder_delta": 0},
+      "expect_status": "ok",
+      "expect_value": 1,
+      "expect_details": {"level": "strong"}
+    },
+    {
+      "name": "anomaly_judge 边界: board_ratio 恰为 2.0 触发 normal",
+      "function": "anomaly_judge",
+      "args": {"fund_z": 1.0, "turnover_pctile": 50.0, "vol_z": 1.0, "board_ratio": 2.0, "zhapu_rate": 10.0, "ladder_delta": 0},
+      "expect_status": "ok",
+      "expect_value": 1,
+      "expect_details": {"level": "normal"}
+    },
+    {
+      "name": "anomaly_judge 边界: zhapu_rate 恰为 45 触发 strong",
+      "function": "anomaly_judge",
+      "args": {"fund_z": 1.0, "turnover_pctile": 50.0, "vol_z": 1.0, "board_ratio": 1.0, "zhapu_rate": 45.0, "ladder_delta": 0},
+      "expect_status": "ok",
+      "expect_value": 1,
+      "expect_details": {"level": "strong"}
+    },
+    {
+      "name": "anomaly_judge 边界: vol_z 恰为 2.5 触发 normal",
+      "function": "anomaly_judge",
+      "args": {"fund_z": 1.0, "turnover_pctile": 50.0, "vol_z": 2.5, "board_ratio": 1.0, "zhapu_rate": 10.0, "ladder_delta": 0},
+      "expect_status": "ok",
+      "expect_value": 1,
+      "expect_details": {"level": "normal"}
+    },
+    {
+      "name": "anomaly_judge 边界: turnover_pctile 恰为 90 触发 normal",
+      "function": "anomaly_judge",
+      "args": {"fund_z": 1.0, "turnover_pctile": 90.0, "vol_z": 1.0, "board_ratio": 1.0, "zhapu_rate": 10.0, "ladder_delta": 0},
+      "expect_status": "ok",
+      "expect_value": 1,
+      "expect_details": {"level": "normal"}
+    },
+    {
+      "name": "anomaly_judge 边界: ladder_delta 恰为 2 触发 normal",
+      "function": "anomaly_judge",
+      "args": {"fund_z": 1.0, "turnover_pctile": 50.0, "vol_z": 1.0, "board_ratio": 1.0, "zhapu_rate": 10.0, "ladder_delta": 2},
+      "expect_status": "ok",
+      "expect_value": 1,
+      "expect_details": {"level": "normal"}
+    },
+    {
+      "name": "anomaly_judge 异常域: fund_z 为 None 跳过并记 skipped",
+      "function": "anomaly_judge",
+      "args": {"fund_z": null, "turnover_pctile": 50.0, "vol_z": 1.0, "board_ratio": 1.0, "zhapu_rate": 10.0, "ladder_delta": 0},
+      "expect_status": "ok",
+      "expect_value": 0,
+      "expect_details": {"level": "none", "triggers": [{"dim": "fund_z", "value": null, "rule": "skipped"}]}
+    },
+    {
+      "name": "anomaly_judge 异常域: 六个输入都为 None 全部跳过",
+      "function": "anomaly_judge",
+      "args": {"fund_z": null, "turnover_pctile": null, "vol_z": null, "board_ratio": null, "zhapu_rate": null, "ladder_delta": null},
+      "expect_status": "ok",
+      "expect_value": 0,
+      "expect_details": {"level": "none", "triggers": [
+        {"dim": "fund_z", "value": null, "rule": "skipped"},
+        {"dim": "turnover_pctile", "value": null, "rule": "skipped"},
+        {"dim": "vol_z", "value": null, "rule": "skipped"},
+        {"dim": "board_ratio", "value": null, "rule": "skipped"},
+        {"dim": "zhapu_rate", "value": null, "rule": "skipped"},
+        {"dim": "ladder_delta", "value": null, "rule": "skipped"}
+      ]}
+    },
+    {
+      "name": "anomaly_judge 异常域: None 与强异常混合,level 仍为 strong",
+      "function": "anomaly_judge",
+      "args": {"fund_z": null, "turnover_pctile": 50.0, "vol_z": 1.0, "board_ratio": 3.5, "zhapu_rate": 10.0, "ladder_delta": 0},
+      "expect_status": "ok",
+      "expect_value": 1,
+      "expect_details": {"level": "strong", "triggers": [
+        {"dim": "fund_z", "value": null, "rule": "skipped"},
+        {"dim": "board_ratio", "value": 3.5, "rule": "board_ratio ≥ 3"}
+      ]}
+    },
+    {
+      "name": "anomaly_judge error: fund_z 布尔",
+      "function": "anomaly_judge",
+      "args": {"fund_z": true, "turnover_pctile": 50.0, "vol_z": 1.0, "board_ratio": 1.0, "zhapu_rate": 10.0, "ladder_delta": 0},
+      "expect_status": "error"
+    },
+    {
+      "name": "anomaly_judge error: fund_z 非数值",
+      "function": "anomaly_judge",
+      "args": {"fund_z": "x", "turnover_pctile": 50.0, "vol_z": 1.0, "board_ratio": 1.0, "zhapu_rate": 10.0, "ladder_delta": 0},
+      "expect_status": "error"
+    },
+    {
+      "name": "anomaly_judge error: fund_z 非有限",
+      "function": "anomaly_judge",
+      "args": {"fund_z": 1e309, "turnover_pctile": 50.0, "vol_z": 1.0, "board_ratio": 1.0, "zhapu_rate": 10.0, "ladder_delta": 0},
+      "expect_status": "error"
+    },
+    {
+      "name": "anomaly_judge error: turnover_pctile 超过 100 越界",
+      "function": "anomaly_judge",
+      "args": {"fund_z": 1.0, "turnover_pctile": 101.0, "vol_z": 1.0, "board_ratio": 1.0, "zhapu_rate": 10.0, "ladder_delta": 0},
+      "expect_status": "error"
+    },
+    {
+      "name": "anomaly_judge error: turnover_pctile 为负越界",
+      "function": "anomaly_judge",
+      "args": {"fund_z": 1.0, "turnover_pctile": -0.1, "vol_z": 1.0, "board_ratio": 1.0, "zhapu_rate": 10.0, "ladder_delta": 0},
+      "expect_status": "error"
+    },
+    {
+      "name": "anomaly_judge error: zhapu_rate 为负",
+      "function": "anomaly_judge",
+      "args": {"fund_z": 1.0, "turnover_pctile": 50.0, "vol_z": 1.0, "board_ratio": 1.0, "zhapu_rate": -1.0, "ladder_delta": 0},
+      "expect_status": "error"
+    },
+    {
+      "name": "anomaly_judge error: ladder_delta 非整数",
+      "function": "anomaly_judge",
+      "args": {"fund_z": 1.0, "turnover_pctile": 50.0, "vol_z": 1.0, "board_ratio": 1.0, "zhapu_rate": 10.0, "ladder_delta": 2.5},
+      "expect_status": "error"
+    },
+    {
+      "name": "anomaly_judge error: ladder_delta 布尔",
+      "function": "anomaly_judge",
+      "args": {"fund_z": 1.0, "turnover_pctile": 50.0, "vol_z": 1.0, "board_ratio": 1.0, "zhapu_rate": 10.0, "ladder_delta": true},
+      "expect_status": "error"
+    },
+    {
+      "name": "range_return 正常: 近5日上涨15%",
+      "function": "range_return",
+      "args": {"closes": [10.0, 10.5, 11.0, 10.8, 11.5], "n": 5},
+      "expect_status": "ok",
+      "expect_value": 15.0,
+      "expect_details": {"first": 10.0, "last": 11.5, "n": 5}
+    },
+    {
+      "name": "range_return 正常: 近3日窗口取最近3个",
+      "function": "range_return",
+      "args": {"closes": [10, 11, 12, 13, 14], "n": 3},
+      "expect_status": "ok",
+      "expect_value": 16.67,
+      "expect_details": {"first": 12.0, "last": 14.0, "n": 3}
+    },
+    {
+      "name": "range_return 正常: 下跌照实报告",
+      "function": "range_return",
+      "args": {"closes": [20, 19, 18, 17, 16], "n": 5},
+      "expect_status": "ok",
+      "expect_value": -20.0
+    },
+    {
+      "name": "range_return 正常: 保留2位小数",
+      "function": "range_return",
+      "args": {"closes": [100.0, 101.0, 102.0, 103.0], "n": 2},
+      "expect_status": "ok",
+      "expect_value": 0.98
+    },
+    {
+      "name": "range_return 边界: 序列长度恰好等于n",
+      "function": "range_return",
+      "args": {"closes": [10, 11, 12], "n": 3},
+      "expect_status": "ok",
+      "expect_value": 20.0
+    },
+    {
+      "name": "range_return 边界: 首末相等涨幅0",
+      "function": "range_return",
+      "args": {"closes": [10, 12, 10], "n": 3},
+      "expect_status": "ok",
+      "expect_value": 0.0
+    },
+    {
+      "name": "range_return 异常域: 长度小于n",
+      "function": "range_return",
+      "args": {"closes": [10, 11], "n": 5},
+      "expect_status": "not_meaningful"
+    },
+    {
+      "name": "range_return 异常域: 空序列",
+      "function": "range_return",
+      "args": {"closes": [], "n": 5},
+      "expect_status": "not_meaningful"
+    },
+    {
+      "name": "range_return 异常域: 窗口首值为0",
+      "function": "range_return",
+      "args": {"closes": [10, 11, 0, 12], "n": 2},
+      "expect_status": "not_meaningful"
+    },
+    {
+      "name": "range_return 异常域: 窗口首值为负",
+      "function": "range_return",
+      "args": {"closes": [10, 11, -3, 12], "n": 2},
+      "expect_status": "not_meaningful"
+    },
+    {
+      "name": "range_return error: closes 非列表",
+      "function": "range_return",
+      "args": {"closes": "abc", "n": 3},
+      "expect_status": "error"
+    },
+    {
+      "name": "range_return error: 含布尔元素",
+      "function": "range_return",
+      "args": {"closes": [true, 1, 2, 3], "n": 3},
+      "expect_status": "error"
+    },
+    {
+      "name": "range_return error: 含字符串元素",
+      "function": "range_return",
+      "args": {"closes": ["x", 1, 2, 3], "n": 3},
+      "expect_status": "error"
+    },
+    {
+      "name": "range_return error: 含None元素",
+      "function": "range_return",
+      "args": {"closes": [null, 1, 2, 3], "n": 3},
+      "expect_status": "error"
+    },
+    {
+      "name": "range_return error: 含非有限元素",
+      "function": "range_return",
+      "args": {"closes": [1e309, 1, 2, 3], "n": 3},
+      "expect_status": "error"
+    },
+    {
+      "name": "range_return error: n非整数",
+      "function": "range_return",
+      "args": {"closes": [1, 2, 3], "n": 2.5},
+      "expect_status": "error"
+    },
+    {
+      "name": "range_return error: n为0",
+      "function": "range_return",
+      "args": {"closes": [1, 2, 3], "n": 0},
+      "expect_status": "error"
+    },
+    {
+      "name": "range_return error: n为负",
+      "function": "range_return",
+      "args": {"closes": [1, 2, 3], "n": -1},
+      "expect_status": "error"
+    },
+    {
+      "name": "range_return error: n布尔",
+      "function": "range_return",
+      "args": {"closes": [1, 2, 3], "n": true},
+      "expect_status": "error"
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+# 部署配置(pnpm 专用):将 @openai/codex 平台包提升到根 node_modules,
+# 使 doctor 的引擎检查能通过 node 模块解析找到它(pnpm 默认嵌套布局下解析不到)。
+# 不修改任何业务代码。
+publicHoistPattern:
+  - "@openai/codex*"
+confirmModulesPurge: false

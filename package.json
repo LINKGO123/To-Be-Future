@@ -1,0 +1,21 @@
+{
+  "name": "fund-radar-desktop",
+  "version": "1.2.0",
+  "private": true,
+  "description": "To Be Future 资金雷达工作台 · Electron 便携版桌面壳（与浏览器模式并存）",
+  "main": "electron/main.cjs",
+  "author": "To Be Future",
+  "license": "UNLICENSED",
+  "scripts": {
+    "electron:dev": "electron .",
+    "electron:build": "node electron/stage.cjs && electron-builder --win nsis",
+    "electron:build:clean": "node electron/stage.cjs --clean && electron-builder --win nsis"
+  },
+  "devDependencies": {
+    "electron": "^44.5.1",
+    "electron-builder": "^26.15.3"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9"
+  }
+}

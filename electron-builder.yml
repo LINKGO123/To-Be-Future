@@ -1,0 +1,64 @@
+# To Be Future 资金雷达工作台 · electron-builder 配置（Windows 安装版 · NSIS）
+# 与浏览器模式 `启动资金雷达.ps1` 并存；不改 orchestrator/calc/datasources 业务逻辑。
+# 打包结构：
+#   app.asar                 ← 仅 Electron 壳（main.cjs / preload.cjs）
+#   resources/app/           ← 仓库运行内容（由 electron/stage.cjs 摊平到 build/app）
+#   resources/{node,python}  ← 便携运行时（由 electron/stage.cjs 摊平到 build/resources）
+appId: com.tobefuture.fundradar
+productName: "To Be Future 资金雷达"
+copyright: "To Be Future"
+
+directories:
+  output: release
+  buildResources: build
+
+# 只把 Electron 壳打进 asar；后端/数据层/前端产物全部走 extraResources（可 spawn，不进 asar）
+files:
+  - "electron/*.cjs"
+  - "package.json"
+
+extraResources:
+  - from: build/app
+    to: app
+  - from: build/resources
+    to: .
+
+asar: true
+
+win:
+  # 内层 exe 用 ASCII 名，避免中文/空格可执行文件名在 NSIS 安装器里出问题。
+  # productName 保留中文用于展示与快捷方式；这里只改可执行文件名（安装后为 fund-radar.exe）。
+  executableName: fund-radar
+  target:
+    - target: nsis
+      arch:
+        - x64
+  # 图标：提供 256x256 的 PNG 会自动生成 .ico（`node electron/generate-icon.cjs` 可生成 build/icon.png）。
+  icon: build/icon.png
+
+nsis:
+  # 向导式安装：可选安装目录（家人可装到 D 盘等任意有写权限的位置），免管理员权限。
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  # 桌面快捷方式 + 开始菜单快捷方式（双击秒开，不再每次解压 335MB 自解压包）。
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: "To Be Future 资金雷达"
+  runAfterFinish: true
+  artifactName: "${productName}-${version}-Setup.${ext}"
+
+npmRebuild: false
+buildDependenciesFromSource: false
+
+# ---------------------------------------------------------------------------
+# 自动更新发布（electron-updater · GitHub Releases）
+# ⚠️ 发布前填真实 owner / repo（当前为占位）：否则安装包内的 app-update.yml 会指向
+#    占位仓库，自动更新检查会失败（失败为静默，不影响应用正常启动）。
+# 发布命令示例（生成 GitHub Release + latest.yml 并上传安装包）：
+#   npx electron-builder --win nsis --publish always    # 需提供 GH_TOKEN 环境变量
+# 未签名：electron-updater 的 NSIS 更新链路仍可用，但 Windows SmartScreen 会告警（已知，接受）。
+publish:
+  provider: github
+  owner: "YOUR_GITHUB_OWNER"   # TODO 发布前填真实 owner
+  repo: "YOUR_GITHUB_REPO"     # TODO 发布前填真实 repo
