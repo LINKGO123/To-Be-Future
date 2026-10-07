@@ -412,6 +412,7 @@ The comparison describes the v1.2.0 source-only revision; see [boundaries](#curr
 
 ## Disclaimer
 
+This project is for learning and educational purposes only and is not for commercial use.
 This project produces research data, analytical frameworks, scenario probabilities, and decision checkpoints only.
 It does not provide investment-action instructions. Nothing produced by this project is investment advice.
 Third-party public data may be delayed, incomplete, or wrong. Users are responsible for verification, decisions,
