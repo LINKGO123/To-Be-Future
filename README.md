@@ -65,6 +65,18 @@ To Be Future 资金雷达工作台是一款面向 A 股的"跟资金动向型"�
 
 ---
 
+## 界面预览
+
+以下截图来自 v1.2.0（深色主题、1440 × 900、连接真实行情数据；Agent 对话页为未接入 AI 的真实首开状态）：
+
+| 首页 | Agent 对话 | 每日复盘 |
+|---|---|---|
+| ![首页：情绪/主线、持仓盈亏、世界股票、要闻与板块要闻](assets/screenshots/2026-10-07/home.png) | ![Agent 对话：对话/Plan/Goal 三种模式、多模型切换与本地语音](assets/screenshots/2026-10-07/agent-chat.png) | ![每日复盘：主线 Top3、涨停梯队、炸板池、游资动向与持仓吻合度](assets/screenshots/2026-10-07/daily-review.png) |
+
+截图说明见 [assets/screenshots/2026-10-07/README.md](assets/screenshots/2026-10-07/README.md)。
+
+---
+
 ## 安装使用
 
 ### Windows
