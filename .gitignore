@@ -30,3 +30,6 @@ dist/
 /resources/
 /orchestrator-flat/
 /electron/pnpm.cmd
+
+# GitHub Actions 工作流（学习资料不推送，token 无 workflow scope）
+.github/workflows/
