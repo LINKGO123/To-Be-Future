@@ -60,5 +60,5 @@ buildDependenciesFromSource: false
 # 未签名：electron-updater 的 NSIS 更新链路仍可用，但 Windows SmartScreen 会告警（已知，接受）。
 publish:
   provider: github
-  owner: "YOUR_GITHUB_OWNER"   # TODO 发布前填真实 owner
-  repo: "YOUR_GITHUB_REPO"     # TODO 发布前填真实 repo
+  owner: "LINKGO123"
+  repo: "To-Be-Future"

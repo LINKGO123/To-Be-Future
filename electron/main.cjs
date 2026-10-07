@@ -479,7 +479,7 @@ function createWindow() {
  *     不影响 `electron:dev` 启动；打包成 NSIS 后才会真正请求 GitHub Releases。
  *   - 私有仓库需在发布/运行环境提供 GH_TOKEN 环境变量（electron-updater 会自动读取），此处不处理密钥。
  */
-const UPDATE_REPO = ""; // TODO 发布前填真实 owner/repo，如 "tobefuture/fund-radar-desktop"
+const UPDATE_REPO = "LINKGO123/To-Be-Future"; // 发布仓库（owner/repo）
 
 let updater = null;       // 惰性加载的 autoUpdater 实例
 let updaterFailed = false;
