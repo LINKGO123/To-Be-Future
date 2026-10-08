@@ -52,9 +52,12 @@
 ```powershell
 uv venv --python 3.14 --relocatable --seed resources/python
 resources\python\Scripts\python.exe -m pip install sherpa-onnx==1.13.8 sherpa-onnx-bin==1.13.8 numpy
+resources\python\Scripts\python.exe -m pip install -r .agents\skills\data-access\scripts\requirements.txt
 ```
 
 注意 Windows venv 的 python 在 `Scripts\python.exe`（不是 `bin/python3`）。
+第二行是数据层取数脚本依赖（requests/pandas/lxml/akshare/baostock/mootdx）——
+缺了它，东财 `em_*` 等行情端点会全部取数失败、前端降级为示例数据。
 
 ### 2.3 sherpa-onnx 离线识别器二进制
 

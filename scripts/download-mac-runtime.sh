@@ -35,7 +35,7 @@ else
 fi
 "$NODE_DST/bin/node" --version
 
-echo "== 2/3 Python ${PYTHON_VERSION}（relocatable venv + sherpa-onnx + numpy）=="
+echo "== 2/3 Python ${PYTHON_VERSION}（relocatable venv + 语音依赖 + 数据层依赖）=="
 if [ -x "$PY_DST/bin/python3" ]; then
   echo "  已存在，跳过（删除 $PY_DST 可强制重建）"
 else
@@ -47,12 +47,16 @@ else
   # --relocatable：生成可整体搬移的 venv（相对引用，不写死构建机绝对路径），便于打进 DMG。
   uv venv --python "$PYTHON_VERSION" --relocatable --seed "$PY_DST"
   "$PY_DST/bin/python3" -m pip install --upgrade pip >/dev/null
-  # sherpa-onnx（流式 Python 包）+ sherpa-onnx-bin（提供 sherpa-onnx-offline 离线二进制）+ numpy。
+  # 语音识别依赖：sherpa-onnx（流式 Python 包）+ sherpa-onnx-bin（提供 sherpa-onnx-offline 离线二进制）+ numpy。
   # macOS arm64 cp314 wheel 在 PyPI / k2-fsa 官方索引均有（见 docs/mac-打包说明.md）。
   "$PY_DST/bin/python3" -m pip install \
     "sherpa-onnx==${SHERPA_VERSION}" "sherpa-onnx-bin==${SHERPA_VERSION}" numpy
+  # 数据层取数脚本依赖（requests/pandas/lxml/akshare/baostock/mootdx）——
+  # 后端 fetch 的东财 em_* 等端点跑在同一便携 python 里，缺 requests 会让全部行情取数失败（降级为示例数据）。
+  "$PY_DST/bin/python3" -m pip install \
+    -r ".agents/skills/data-access/scripts/requirements.txt"
 fi
-"$PY_DST/bin/python3" -c 'import sherpa_onnx, numpy; print("  sherpa_onnx", sherpa_onnx.__version__, "| numpy", numpy.__version__)'
+"$PY_DST/bin/python3" -c 'import sherpa_onnx, numpy, requests; print("  sherpa_onnx", sherpa_onnx.__version__, "| numpy", numpy.__version__, "| requests", requests.__version__)'
 
 echo "== 3/3 sherpa-onnx-offline 离线识别器二进制 =="
 if [ -x "$STT_BIN_DST/sherpa-onnx-offline" ]; then
