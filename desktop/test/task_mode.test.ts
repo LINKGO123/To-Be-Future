@@ -7,7 +7,7 @@ import { backend, type ResearchTaskRequest } from "../src/verticals/finance/lib/
 const page = readFileSync(new URL("../src/verticals/finance/pages/MyReports.tsx", import.meta.url), "utf8");
 
 const runtime = {
-  schemaVersion: 2, executionMode: "direct", directSupported: true, directReason: "verified",
+  schemaVersion: 2, modePreferenceVersion: 1, executionMode: "direct", directSupported: true, directReason: "verified",
   source: { provider: "deepseek", apiKey: "test-key", baseURL: "https://api.example.test", model: "test-model" },
 };
 Object.defineProperty(globalThis, "localStorage", { configurable: true, value: {

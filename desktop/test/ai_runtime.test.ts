@@ -18,12 +18,12 @@ function storageFixture(initial?: string) {
 
 const api = { provider: "deepseek", baseURL: "https://api.deepseek.com", apiKey: "test-key", model: "deepseek-v4" };
 
-test("旧版平铺配置读入后默认关闭 Agent，不在读取时改写存储", () => {
+test("旧版平铺配置读入后默认开启 Agent（统一 Agent 模式），不在读取时改写存储", () => {
   const values = storageFixture(JSON.stringify(api));
   const before = values.get(LLM_KEY);
   const read = readAiRuntime();
   assert.equal(read.status, "ok");
-  assert.equal(read.config?.executionMode, "direct");
+  assert.equal(read.config?.executionMode, "agent");
   assert.equal(read.config?.directSupported, false);
   assert.equal(values.get(LLM_KEY), before);
 });
@@ -38,12 +38,12 @@ test("API 通过直连能力探针后可切换，密钥只保存一份", () => {
   assert.equal((values.get(LLM_KEY)?.match(/test-key/g) ?? []).length, 1);
 });
 
-test("重新连接 AI 后默认普通对话，不继承旧来源的 Agent 开关", () => {
+test("重新连接 AI 后默认 Agent 模式，不继承旧来源的显式直连偏好", () => {
   storageFixture();
   saveUserLlm(api, { directSupported: true, directReason: "verified" });
-  saveExecutionMode("agent");
+  saveExecutionMode("direct");
   saveUserLlm({ ...api, model: "deepseek-new" }, { directSupported: true, directReason: "verified" });
-  assert.equal(readAiRuntime().config?.executionMode, "direct");
+  assert.equal(readAiRuntime().config?.executionMode, "agent");
 });
 
 test("重新测试同一来源保留用户明确开启的 Agent", () => {
@@ -70,13 +70,13 @@ test("订阅与 API 均能关闭 Agent，传输能力标记不被伪造", () => 
   assert.equal(readAiRuntime().status, "none");
 });
 
-test("旧 v2 自动开启值迁移为关闭，新版明确开启跨刷新保持", () => {
+test("旧 v2 值在统一 Agent 模式下保持为 Agent，显式关闭跨刷新保持", () => {
   const old = { schemaVersion: 2, source: api, executionMode: "agent", directSupported: false, directReason: "" };
   const values = storageFixture(JSON.stringify(old));
-  assert.equal(readAiRuntime().config?.executionMode, "direct");
-  assert.deepEqual(JSON.parse(values.get(LLM_KEY)!), old, "读取不改密钥存储");
-  saveExecutionMode("agent");
   assert.equal(readAiRuntime().config?.executionMode, "agent");
+  assert.deepEqual(JSON.parse(values.get(LLM_KEY)!), old, "读取不改密钥存储");
+  saveExecutionMode("direct");
+  assert.equal(readAiRuntime().config?.executionMode, "direct");
   assert.deepEqual(readAiRuntime().config?.source, api);
-  assert.equal(readAiRuntime().config?.executionMode, "agent", "重新读取保留显式开关");
+  assert.equal(readAiRuntime().config?.executionMode, "direct", "重新读取保留显式开关");
 });

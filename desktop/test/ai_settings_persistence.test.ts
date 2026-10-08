@@ -4,9 +4,11 @@ import { apiPresetForSaved } from "../src/verticals/finance/lib/ai-models.ts";
 import { loadUserLlm, saveUserLlm } from "../src/verticals/finance/lib/llmStore.ts";
 
 test("自定义端点保存重读后保留来源、模型及密钥，预设不按模型名串台 (#48)", () => {
-  let stored: string | null = null;
+  const values = new Map<string, string>();
   Object.defineProperty(globalThis, "localStorage", { configurable: true, value: {
-    getItem: () => stored, setItem: (_key: string, value: string) => { stored = value; },
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => values.set(key, value),
+    removeItem: (key: string) => values.delete(key),
   } });
   for (const [provider, model, preset] of [
     ["openai-compatible", "my-model", "custom"],
