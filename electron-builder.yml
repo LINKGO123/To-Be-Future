@@ -80,3 +80,5 @@ publish:
   provider: github
   owner: "LINKGO123"
   repo: "To-Be-Future"
+  # 发布为正式 release（默认 draft 会与已存在的正式 Release 类型不兼容而跳过上传）
+  releaseType: release
