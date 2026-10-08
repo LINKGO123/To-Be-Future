@@ -33,15 +33,58 @@ function dirSize(p) {
   for (const f of fs.readdirSync(p)) {
     const fp = path.join(p, f);
     const st = fs.lstatSync(fp);
-    if (st.isDirectory() || st.isSymbolicLink()) sum += dirSize(fp);
-    else sum += st.size;
+    if (st.isDirectory()) sum += dirSize(fp);
+    else if (st.isSymbolicLink()) {
+      // dereferenceTree 之后不应再出现；若出现（dangling 等）跳过，不影响复制正确性
+      continue;
+    } else sum += st.size;
   }
   return sum;
+}
+
+/** Node 的 fs.cpSync({dereference:true}) 不会递归解引用目录树内的 symlink，
+ *  而是把相对 symlink 重写成指向源目录的绝对 symlink——打包进 DMG 后这些绝对路径
+ *  在用户机器上必然断链。此函数把 to 树内的 symlink 全部替换为真实内容副本。 */
+function dereferenceTree(root) {
+  let entries;
+  try {
+    entries = fs.readdirSync(root, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const ent of entries) {
+    const fp = path.join(root, ent.name);
+    if (ent.isSymbolicLink()) {
+      let real;
+      try {
+        real = fs.realpathSync(fp);
+      } catch {
+        fs.rmSync(fp, { force: true }); // dangling symlink：包内无用，删掉
+        continue;
+      }
+      let st;
+      try {
+        st = fs.statSync(real);
+      } catch {
+        continue;
+      }
+      fs.rmSync(fp, { force: true });
+      if (st.isDirectory()) {
+        fs.cpSync(real, fp, { recursive: true, errorOnExist: false, force: true });
+        dereferenceTree(fp);
+      } else {
+        fs.copyFileSync(real, fp);
+      }
+    } else if (ent.isDirectory()) {
+      dereferenceTree(fp);
+    }
+  }
 }
 
 function cpDir(from, to, { dereference = false } = {}) {
   const start = Date.now();
   fs.cpSync(from, to, { recursive: true, dereference, errorOnExist: false, force: true });
+  if (dereference) dereferenceTree(to);
   const sz = fs.existsSync(to) ? dirSize(to) : 0;
   console.log(`  cp ${path.relative(REPO_ROOT, from)} -> ${path.relative(REPO_ROOT, to)}  (${mb(sz)}, ${((Date.now() - start) / 1000).toFixed(1)}s)`);
 }
@@ -54,7 +97,10 @@ function cpFile(from, to) {
 
 function main() {
   if (clean) {
-    fs.rmSync(BUILD_DIR, { recursive: true, force: true });
+    // 只清重建目标 app/ 与 resources/，保留 build/icon.icns 等图标产物——
+    // make-icns.sh 先于本脚本运行，若整个删掉 build/ 会把 electron-builder 要用的图标一并删掉。
+    fs.rmSync(APP_DIR, { recursive: true, force: true });
+    fs.rmSync(RES_DIR, { recursive: true, force: true });
   }
   fs.mkdirSync(APP_DIR, { recursive: true });
   fs.mkdirSync(RES_DIR, { recursive: true });
