@@ -77,9 +77,9 @@ export function FrAppUpdate() {
 
       {/* 失败 */}
       {status.state === "error" && (
-        <p className="fr-body inline-flex items-start gap-2 font-bold text-destructive" role="alert">
+        <p className="fr-body flex items-start gap-2 font-bold text-destructive" role="alert">
           <AlertCircle className="mt-1 h-6 w-6 shrink-0" aria-hidden="true" />
-          检查更新失败：{status.message}
+          <span className="min-w-0 break-words">检查更新失败：{status.message}</span>
         </p>
       )}
     </div>

@@ -579,6 +579,19 @@ function sendUpdateProgress(payload) {
   }
 }
 
+/** 尚未发布新版本时 GitHub 返回 404（Release 里找不到 latest*.yml）：对用户按「暂无更新」静默，
+ *  不弹错误横幅、不暴露技术细节（本地测试版 / 刚建仓阶段属于这种情况）。 */
+const UPDATE_NOT_PUBLISHED_RE = /Cannot find .*\.yml|HttpError:\s*404/i;
+
+/** electron-updater 的 err.message 可能含 Headers / 堆栈（数千字符），直接给 UI 会撑爆横幅。
+ *  完整信息只进日志，UI 只拿一句话。 */
+function briefUpdateError(raw) {
+  const line = String(raw ?? "").split("\n")[0].replace(/\s+/g, " ").trim();
+  if (!line) return "暂时无法连接更新服务器，请稍后重试";
+  const brief = line.length > 90 ? `${line.slice(0, 90)}…` : line;
+  return `暂时无法连接更新服务器（${brief}）`;
+}
+
 /** 惰性加载 electron-updater 并装配事件 / feedUrl（只成功一次）。 */
 function ensureUpdater() {
   if (updater) return updater;
@@ -612,8 +625,16 @@ function ensureUpdater() {
       }));
     autoUpdater.on("update-downloaded", (info) =>
       sendUpdateStatus({ state: "downloaded", version: info && info.version, current: app.getVersion() }));
-    autoUpdater.on("error", (err) =>
-      sendUpdateStatus({ state: "error", message: err && err.message ? err.message : String(err), current: app.getVersion() }));
+    autoUpdater.on("error", (err) => {
+      const raw = err && err.message ? err.message : String(err);
+      log("warn", `[updater] 检查更新出错：${raw}`); // 完整 Headers / 堆栈只进日志
+      if (UPDATE_NOT_PUBLISHED_RE.test(raw)) {
+        // 还没发布新版本（Release 缺 latest-*.yml）：按「暂无更新」静默处理，不打扰用户
+        sendUpdateStatus({ state: "not-available", current: app.getVersion() });
+        return;
+      }
+      sendUpdateStatus({ state: "error", message: briefUpdateError(raw), current: app.getVersion() });
+    });
     updater = autoUpdater;
     return updater;
   } catch (e) {
@@ -638,7 +659,10 @@ function setupUpdateIpc() {
         version: res && res.updateInfo ? res.updateInfo.version : undefined,
       };
     } catch (e) {
-      return { ok: false, reason: e && e.message ? e.message : String(e) };
+      const raw = e && e.message ? e.message : String(e);
+      log("warn", `[updater] 手动检查更新失败：${raw}`);
+      if (UPDATE_NOT_PUBLISHED_RE.test(raw)) return { ok: true, updateAvailable: false };
+      return { ok: false, reason: briefUpdateError(raw) };
     }
   });
   ipcMain.handle("app:download-update", async () => {
@@ -648,7 +672,9 @@ function setupUpdateIpc() {
       await u.downloadUpdate();
       return { ok: true };
     } catch (e) {
-      return { ok: false, reason: e && e.message ? e.message : String(e) };
+      const raw = e && e.message ? e.message : String(e);
+      log("warn", `[updater] 下载更新失败：${raw}`);
+      return { ok: false, reason: briefUpdateError(raw) };
     }
   });
   ipcMain.handle("app:install-update", () => {

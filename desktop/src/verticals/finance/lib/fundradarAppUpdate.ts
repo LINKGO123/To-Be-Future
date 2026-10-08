@@ -65,9 +65,17 @@ export function mapAppUpdateStatus(p: AppUpdateStatusPayload): AppUpdateStatus {
     case "available": return { state: "available", version: p.version ?? "", current };
     case "not-available": return { state: "not-available", version: p.version, current };
     case "downloaded": return { state: "downloaded", version: p.version ?? "", current };
-    case "error": return { state: "error", message: p.message ?? "未知错误" };
+    case "error": return { state: "error", message: clipUpdateMessage(p.message ?? "未知错误") };
     default: return { state: "idle" };
   }
+}
+
+/** 主进程正常只发一句话；这里再兜一层：折叠空白 + 截断，防止任何超长文本（堆栈/Headers）撑爆 UI。 */
+const MAX_UPDATE_MSG_LEN = 160;
+function clipUpdateMessage(raw: string): string {
+  const t = String(raw).replace(/\s+/g, " ").trim();
+  if (!t) return "未知错误";
+  return t.length > MAX_UPDATE_MSG_LEN ? `${t.slice(0, MAX_UPDATE_MSG_LEN)}…` : t;
 }
 
 export function checkForAppUpdate(): Promise<AppUpdateInvokeResult> {
