@@ -79,19 +79,23 @@ To Be Future 资金雷达工作台是一款面向 A 股的"跟资金动向型"�
 
 ## 安装使用
 
+下载页（GitHub Releases，含最新版本与全部安装包）：<https://github.com/LINKGO123/To-Be-Future/releases/latest>
+
 ### Windows
 
-下载 `To Be Future 资金雷达-1.2.0-Setup.exe`，双击后按向导安装：
+下载 `fund-radar-desktop-setup-1.2.0.exe`，双击后按向导安装：
 
 - 可自选安装目录（例如 D 盘），免管理员权限
 - 安装完成后自动在桌面与开始菜单创建"To Be Future 资金雷达"快捷方式
 - 双击快捷方式即可打开，无需每次解压
 
-详细安装、卸载说明见 [release/下载说明.md](release/下载说明.md)。
-
 ### Mac
 
-macOS（arm64）安装包待打包发布。当前以源码方式运行，见下方"开发（本地跑）"。
+下载 `fund-radar-desktop-1.2.0.dmg`（Apple Silicon），打开后把「To Be Future 资金雷达」拖进「应用程序」：
+
+- 首次打开需**右键 → 打开**（未签名，Gatekeeper 提示属正常，只需一次）
+
+详细安装、卸载说明见 [release/下载说明.md](release/下载说明.md)。
 
 ---
 
