@@ -27,9 +27,14 @@ dist/
 # Electron ä¾¿æºç‰ˆæ‰“åŒ…äº§ç‰© / ä¾¿æºè¿è¡Œæ—¶ï¼ˆä½“ç§¯å¤§ï¼Œä¸å…¥åº“ï¼‰
 /build/
 /release/
-/resources/
+/resources/*
 /orchestrator-flat/
 /electron/pnpm.cmd
 
 # GitHub Actions ¹¤×÷Á÷£¨Ñ§Ï°×ÊÁÏ²»ÍÆËÍ£¬token ÎŞ workflow scope£©
 .github/workflows/
+
+# streaming_stt.py is project code (streaming STT script), must be versioned
+!/resources/sherpa-onnx/
+/resources/sherpa-onnx/*
+!/resources/sherpa-onnx/streaming_stt.py

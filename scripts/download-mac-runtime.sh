@@ -45,7 +45,7 @@ else
   fi
   uv python install "$PYTHON_VERSION"
   # --relocatable：生成可整体搬移的 venv（相对引用，不写死构建机绝对路径），便于打进 DMG。
-  uv venv --python "$PYTHON_VERSION" --relocatable "$PY_DST"
+  uv venv --python "$PYTHON_VERSION" --relocatable --seed "$PY_DST"
   "$PY_DST/bin/python3" -m pip install --upgrade pip >/dev/null
   # sherpa-onnx（流式 Python 包）+ sherpa-onnx-bin（提供 sherpa-onnx-offline 离线二进制）+ numpy。
   # macOS arm64 cp314 wheel 在 PyPI / k2-fsa 官方索引均有（见 docs/mac-打包说明.md）。
@@ -67,8 +67,14 @@ else
   mkdir -p "$STT_BIN_DST"
   cp "$OFFLINE_BIN" "$STT_BIN_DST/"
   # 若 wheel 附带动态库（libsherpa-onnx-c-api.dylib / libonnxruntime*.dylib），一并复制到 bin/ 同目录，保证二进制自包含。
-  cp "$PY_DST"/lib/lib*.dylib "$STT_BIN_DST/" 2>/dev/null || true
-  cp "$PY_DST"/bin/*.dylib "$STT_BIN_DST/" 2>/dev/null || true
+  # 注意：dylib 不在 $PY_DST/lib 或 $PY_DST/bin，而在 site-packages/sherpa_onnx/lib/。
+  SHERPA_LIB_DIR="$(find "$PY_DST" -type d -path "*site-packages/sherpa_onnx/lib" 2>/dev/null | head -1)"
+  if [ -n "$SHERPA_LIB_DIR" ]; then
+    cp "$SHERPA_LIB_DIR"/*.dylib "$STT_BIN_DST/" 2>/dev/null || true
+  else
+    cp "$PY_DST"/lib/lib*.dylib "$STT_BIN_DST/" 2>/dev/null || true
+    cp "$PY_DST"/bin/*.dylib "$STT_BIN_DST/" 2>/dev/null || true
+  fi
 fi
 ls -la "$STT_BIN_DST"
 
