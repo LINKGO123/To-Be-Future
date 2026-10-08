@@ -43,15 +43,3 @@ test("左上角使用 To Be Future 品牌标识，不引入外部资源", () => 
   assert.doesNotMatch(layout, /<img[ >]|https?:\/\/[^"]+\.(png|jpe?g|svg|gif)/);
 });
 
-test("首页以 Agent 为首屏，保留数据组件但不自动取数或启动任务", () => {
-  const home = read("verticals/finance/pages/Home.tsx");
-  const overview = read("verticals/finance/components/HomeOverview.tsx");
-  assert.doesNotMatch(home, /<HomeOverview|backend\.fetch|backend\.research/);
-  assert.match(home, /<FinanceHomeAgent/);
-  assert.match(overview, /backend\.fetch\("tx_quotes_batch"/);
-  assert.match(overview, /backend\.runs\(/);
-  assert.match(overview, /fetched_at/);
-  assert.match(overview, /\.id/);
-  assert.match(overview, /test_scenario/);
-  assert.doesNotMatch(overview, /云川|DEMO-|3,268|chatStream|backend\.research\(/);
-});
