@@ -125,6 +125,23 @@ npx electron-builder --win nsis                 # 出 NSIS 安装包
 打包成功后检查 `release/` 下出现 `fund-radar.exe`（NSIS 安装包，约 400–500MB 属正常）。
 双击安装：可自选目录、免管理员、桌面与开始菜单建快捷方式。
 
+**数据层验收（必须）**：只验「能安装」不够——便携 Python 若缺数据层依赖（requests/pandas 等），
+软件能开、语音能跑，但所有行情取数会静默失败、页面降级为示例数据（历史上真实发生过：缺 requests 导致全站示例数据）。
+用 `scripts/smoke-fetch.sh` 两步验收：
+
+```powershell
+# 1) 依赖齐全（对打包用的便携 python）
+bash scripts/smoke-fetch.sh --python resources\python\Scripts\python.exe
+
+# 2) 核心取数端点（安装并启动软件后，对运行中的后端；--auto 的 token 自动发现依赖 Git Bash 环境，
+#    拿不到就用 --token 显式传）
+bash scripts/smoke-fetch.sh --base http://127.0.0.1:8765 --auto
+```
+
+两步都「数据层冒烟通过」才算打包完成。检查 5 个核心端点：
+涨停池 / 炸板池 / 情绪 / 龙虎榜 / 板块资金流（首页、主线雷达、复盘、龙虎榜依赖）。
+脚本是 bash；Windows 下在 Git Bash / WSL 里跑，或用 PowerShell 等价 curl 命令。
+
 ---
 
 ## 7. 常见问题

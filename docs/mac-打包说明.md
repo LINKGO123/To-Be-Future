@@ -122,7 +122,27 @@ pnpm run electron:build:mac
 
 ---
 
-## 5. 首次打开（不签名的说明）
+## 5. 打包后数据层验收（必须）
+
+只验「能启动」不够——便携 Python 若缺数据层依赖（requests/pandas 等），App 能开、语音能跑，
+但所有行情取数会静默失败、页面降级为示例数据（历史上真实发生过：缺 requests 导致全站示例数据）。
+
+用 `scripts/smoke-fetch.sh` 做两步验收：
+
+```bash
+# 1) 依赖齐全（对便携 python）
+bash scripts/smoke-fetch.sh --python resources/python/darwin-arm64/bin/python3
+
+# 2) 核心取数端点（对运行中的 App 后端，--auto 自动读 token）
+bash scripts/smoke-fetch.sh --base http://127.0.0.1:8765 --auto
+```
+
+两步都「数据层冒烟通过」才算打包完成。检查 5 个核心端点：
+涨停池 / 炸板池 / 情绪 / 龙虎榜 / 板块资金流（首页、主线雷达、复盘、龙虎榜依赖）。
+
+---
+
+## 6. 首次打开（不签名的说明）
 
 未签名的 dmg 拖进「应用程序」后，**双击会提示「无法打开，因为无法验证开发者」**：
 
@@ -132,7 +152,7 @@ pnpm run electron:build:mac
 
 ---
 
-## 6. （可选）发布到 GitHub Releases
+## 7. （可选）发布到 GitHub Releases
 
 `electron-builder.yml` 的 `publish` 已指向 github（`LINKGO123/To-Be-Future`）且配了 `releaseType: release`（默认 draft 会与已存在的正式 Release 类型不兼容而跳过上传）。
 
@@ -149,7 +169,7 @@ npx electron-builder --mac dmg --publish always   # 需 GH_TOKEN 环境变量
 
 ---
 
-## 7. 常见问题
+## 8. 常见问题
 
 | 现象 | 处理 |
 |---|---|
