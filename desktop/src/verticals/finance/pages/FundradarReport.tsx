@@ -23,6 +23,8 @@ import { FrScoreRing } from "@/components/fundradar/FrScoreRing";
 import { FrReportChart } from "@/components/fundradar/FrReportChart";
 import { FrFlowTrendChart, type FrFlowTrendPoint } from "@/components/fundradar/FrFlowTrendChart";
 import { FrSourceFooter } from "@/components/fundradar/FrSourceFooter";
+import { FrSectionNav, type FrSection } from "@/components/fundradar/FrSectionNav";
+import { FrBackToTop } from "@/components/fundradar/FrBackToTop";
 import { FR_DISCLAIMER } from "@/data/fundradarSample";
 import { frDateLabel, frEndpointCn } from "@/lib/fundradarData";
 import {
@@ -39,6 +41,17 @@ import {
 } from "@/lib/fundradarReportHistory";
 
 /* ---------------- 文案/格式工具 ---------------- */
+
+/** 报告页区块锚点（id 与下方各 section 对应；资金趋势/历史报告为条件渲染，缺失时 scrollspy 自动跳过） */
+const REPORT_SECTIONS: FrSection[] = [
+  { id: "report-head", label: "综合评分" },
+  { id: "report-indicators", label: "指标卡" },
+  { id: "report-kline", label: "走势图" },
+  { id: "report-flow", label: "资金趋势" },
+  { id: "report-risk", label: "风险点" },
+  { id: "report-stance", label: "多空倾向" },
+  { id: "report-history", label: "历史报告" },
+];
 
 const signedYi = (v: number): string => `${v > 0 ? "+" : ""}${(v / 1e8).toFixed(2)}亿`;
 const pct = (v: number | null): string => (v == null ? "—" : `${Math.round(v)}%`);
@@ -499,8 +512,11 @@ export function FundradarReport() {
               </p>
             )}
 
+            {/* 页内锚点导航：报告长页快速定位（滚动时高亮当前区块） */}
+            <FrSectionNav sections={REPORT_SECTIONS} />
+
             {/* 头卡 + 综合评分横幅 */}
-            <section aria-label="报告头卡与综合评分" className="fr-glass fr-glass-accent mb-5 rounded-xl p-5">
+            <section id="report-head" aria-label="报告头卡与综合评分" className="fr-glass fr-glass-accent mb-5 scroll-mt-16 rounded-xl p-5">
               <div className="flex flex-wrap items-center gap-x-5 gap-y-4">
                 {/* 第一重点：综合评分（0-100）——SVG 环形进度条 + 中间 count-up，置顶、左侧主位 */}
                 <div className="flex flex-col items-center gap-1 rounded-btn border border-border bg-muted/40 px-7 py-4">
@@ -546,7 +562,7 @@ export function FundradarReport() {
             </section>
 
             {/* 四大类指标卡 */}
-            <section aria-label="四大类指标卡" className="mb-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <section id="report-indicators" aria-label="四大类指标卡" className="mb-5 grid scroll-mt-16 gap-3 md:grid-cols-2 xl:grid-cols-4">
               {/* ① 行情 */}
               <div className="fr-glass rounded-xl p-4">
                 <p className="fr-sub font-bold text-muted-foreground">① 行情</p>
@@ -620,7 +636,7 @@ export function FundradarReport() {
             </section>
 
             {/* 趋势图：K线 + MA + 成交量 + MACD + RSI */}
-            <section aria-label="K线与技术指标趋势图" className="fr-glass mb-5 rounded-xl p-5">
+            <section id="report-kline" aria-label="K线与技术指标趋势图" className="fr-glass mb-5 scroll-mt-16 rounded-xl p-5">
               <div className="mb-2">
                 <p className="fr-sub font-semibold uppercase tracking-[0.2em] text-primary">Chart</p>
                 <h2 className="fr-title mt-1 font-bold">走势与技术指标</h2>
@@ -642,7 +658,7 @@ export function FundradarReport() {
 
             {/* 资金趋势 */}
             {live.flow && flowTrendPoints.length > 0 && (
-              <section aria-label="资金流向趋势" className="fr-glass mb-5 rounded-xl p-5">
+              <section id="report-flow" aria-label="资金流向趋势" className="fr-glass mb-5 scroll-mt-16 rounded-xl p-5">
                 <div className="mb-2">
                   <p className="fr-sub font-semibold uppercase tracking-[0.2em] text-primary">Fund Flow</p>
                   <h2 className="fr-title mt-1 font-bold">资金流向趋势</h2>
@@ -655,7 +671,7 @@ export function FundradarReport() {
             )}
 
             {/* 风险点 */}
-            <section aria-label="风险点" className="fr-glass mb-5 rounded-xl p-5">
+            <section id="report-risk" aria-label="风险点" className="fr-glass mb-5 scroll-mt-16 rounded-xl p-5">
               <div className="mb-3">
                 <p className="fr-sub font-semibold uppercase tracking-[0.2em] text-primary">Risks</p>
                 <h2 className="fr-title mt-1 font-bold">风险点</h2>
@@ -671,7 +687,7 @@ export function FundradarReport() {
             </section>
 
             {/* 短期 / 长期倾向 */}
-            <section aria-label="短期与长期倾向" className="mb-5 grid gap-3 md:grid-cols-2">
+            <section id="report-stance" aria-label="短期与长期倾向" className="mb-5 grid scroll-mt-16 gap-3 md:grid-cols-2">
               <div className="fr-glass rounded-xl p-5">
                 <div className="flex items-center justify-between gap-2">
                   <h3 className="fr-title font-bold">短期倾向（约 1-2 周）</h3>
@@ -728,7 +744,7 @@ export function FundradarReport() {
 
         {/* 历史报告：最近生成的报告，可点击回看 */}
         {history.length > 0 && (
-          <section aria-label="历史报告" className="fr-glass mb-5 rounded-xl p-5">
+          <section id="report-history" aria-label="历史报告" className="fr-glass mb-5 scroll-mt-16 rounded-xl p-5">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <History className="h-6 w-6 text-primary" aria-hidden="true" />
@@ -825,6 +841,7 @@ export function FundradarReport() {
           </section>
         )}
       </div>
+      <FrBackToTop />
     </div>
   );
 }

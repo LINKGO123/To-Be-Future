@@ -1,21 +1,45 @@
 import type { backend } from "../lib/backend";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { useId, useMemo, useRef } from "react";
+import { useId, useMemo, useRef, type ReactNode } from "react";
 import type { Components } from "react-markdown";
 import { appendixIds, citationPlugin } from "../lib/reportCitations";
+import { extractMarkdownH2 } from "../lib/fundradarNav";
+import { FrSectionNav, type FrSection } from "./fundradar/FrSectionNav";
 
 // Do not execute HTML or load remote images from untrusted report text.
 const markdownComponents = {
   img: ({ alt }: { alt?: string }) => <span className="text-muted-foreground">[图片未加载：{alt || "报告图片"}]</span>,
 };
 
+/** 从 React 子节点提取纯文本（把 markdown 标题文本与锚点列表对齐） */
+function extractText(node: ReactNode): string {
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(extractText).join("");
+  if (node && typeof node === "object" && "props" in node) {
+    const props = (node as { props?: { children?: ReactNode } }).props;
+    return props?.children != null ? extractText(props.children) : "";
+  }
+  return "";
+}
+
 export function ResearchReport({ result }: { result: Awaited<ReturnType<typeof backend.report>> }) {
   const prefix = `reference-${useId()}-${encodeURIComponent(result.run_id)}-`;
   const panel = useRef<HTMLDetailsElement>(null);
   const ids = useMemo(() => appendixIds(result.appendix ?? ""), [result.appendix]);
-  const components: Components = {
+
+  // 六阶段报告的二级标题 → 页内锚点（滚动高亮、点击定位）
+  const sections = useMemo<FrSection[]>(
+    () => extractMarkdownH2(result.report ?? "").map((label, i) => ({ id: `fr-report-sec-${i}`, label })),
+    [result.report],
+  );
+
+  const components = useMemo<Components>(() => ({
     ...markdownComponents,
+    h2: ({ node: _node, children, ...props }) => {
+      const idx = sections.findIndex((s) => s.label === extractText(children).trim());
+      return <h2 {...props} {...(idx >= 0 ? { id: sections[idx]?.id } : {})}>{children}</h2>;
+    },
     a: ({ node: _node, href, children, ...props }) => <a {...props} href={href} onClick={event => {
       if (!href?.startsWith(`#${prefix}`)) return;
       const target = [...(panel.current?.querySelectorAll<HTMLElement>("[id]") ?? [])]
@@ -26,11 +50,12 @@ export function ResearchReport({ result }: { result: Awaited<ReturnType<typeof b
       target.focus({ preventScroll: true });
       target.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "instant" });
     }}>{children}</a>,
-  };
+  }), [sections, prefix]);
   if (result.availability === "missing") return <p className="text-sm text-muted-foreground">这次运行尚无报告文件，请查看上方运行状态。</p>;
   if (result.availability !== "ready" || result.report === null) return <p role="status" className="text-sm text-muted-foreground">报告尚未通过最终校验，正文暂不可用。本地草稿保留供排查；研究结束后可从归档重新打开。</p>;
   return <>
     {result.run_status === "incomplete" && <p role="status" className="mb-2 text-sm text-muted-foreground">这份报告资料不完整，请先查看报告中的数据缺口。</p>}
+    {sections.length > 1 && <FrSectionNav sections={sections} />}
     <div className={result.appendix ? "grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(260px,.65fr)]" : "min-w-0"}>
       <article className="research-paper rounded border border-border" aria-label="已校验研究报告">
         <p className="workspace-kicker mb-6 border-b border-border pb-4">To Be Future / Research Note</p>

@@ -6,13 +6,16 @@ const read = (p: string) => readFileSync(new URL(`../src/${p}`, import.meta.url)
 
 test("资金雷达侧栏：常用/进阶双区、子栏目与真实 AI 入口", () => {
   const layout = read("verticals/finance/components/layout/Layout.tsx");
-  const core = layout.slice(layout.indexOf("const NAV_CORE"), layout.indexOf("const NAV_ADV"));
-  const adv = layout.slice(layout.indexOf("const NAV_ADV"), layout.indexOf("const INTEL_LINKS"));
+  // 导航数据已提取为单一数据源（菜单搜索与侧栏共用），从 fundradarNav 读取断言
+  const nav = read("verticals/finance/lib/fundradarNav.ts");
+  assert.match(layout, /from "@\/lib\/fundradarNav"/, "Layout 必须引用单一导航数据源");
+  const core = nav.slice(nav.indexOf("export const NAV_CORE"), nav.indexOf("export const NAV_ADV"));
+  const adv = nav.slice(nav.indexOf("export const NAV_ADV"), nav.indexOf("export const INTEL_LINKS"));
   assert.deepEqual([...core.matchAll(/label: "([^"]+)"/g)].map(m => m[1]),
     ["首页", "Agent 对话", "主线雷达", "评分榜", "每日复盘", "报告", "龙虎榜", "我的持仓", "设置"]);
   assert.deepEqual([...adv.matchAll(/label: "([^"]+)"/g)].map(m => m[1]),
     ["技能中心", "资讯雷达", "产业信号", "板块中心", "个股研究", "多空辩论", "回测", "自选股", "我的研报", "研究记录"]);
-  for (const route of ["/intel/investment-news", "/intel/news", "/intel/filings", "/intel/events", "/signals/gpu-rent", "/sectors/humanoid", "/sectors/ai-computing"]) assert.ok(layout.includes(route));
+  for (const route of ["/intel/investment-news", "/intel/news", "/intel/filings", "/intel/events", "/signals/gpu-rent", "/sectors/humanoid", "/sectors/ai-computing"]) assert.ok(nav.includes(route), route);
   assert.doesNotMatch(layout, /FinanceAiConsole|consoleOpen|vr-ai-console|openAgent|打开普通对话/);
   assert.match(layout, /<FinanceAiDock/);
   assert.match(layout, /workspace-sidebar/);

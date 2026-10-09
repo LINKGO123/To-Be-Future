@@ -7,6 +7,7 @@ import { useAiPage } from "../../../core/ai/pageContext";
 import { useAiRuntime } from "@/hooks/useAiRuntime";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Disclaimer } from "@/components/ui/Disclaimer";
+import { FrBackToTop } from "@/components/fundradar/FrBackToTop";
 import { api, ApiError, downloadReport, type MyReport } from "@/lib/api";
 import {
   backend, friendlyAgentError, type ResearchTaskRequest, type TaskRouteDecision,
@@ -475,6 +476,7 @@ export function MyReports() {
       )}
 
       <Disclaimer />
+      <FrBackToTop />
     </div>
   );
 }

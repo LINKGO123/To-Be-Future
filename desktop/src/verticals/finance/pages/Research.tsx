@@ -7,6 +7,7 @@ import { useAiPage } from "../../../core/ai/pageContext";
 import { backend, ApiError, type RunListItem, type ResearchStatus, type AlertDiff } from "@/lib/backend";
 import { ResearchReport } from "../components/ResearchReport";
 import { ResearchRunItem, ResearchFailureNotice } from "../components/ResearchRunItem";
+import { FrBackToTop } from "@/components/fundradar/FrBackToTop";
 
 /**
  * 「个股研究」—— 六阶段研究引擎的唯一入口。
@@ -490,6 +491,7 @@ export function Research() {
       </GlassCard>
 
       <Disclaimer />
+      <FrBackToTop />
     </div>
   );
 }

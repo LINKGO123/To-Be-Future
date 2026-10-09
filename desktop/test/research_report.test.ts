@@ -28,7 +28,7 @@ test("研究报告区区分未校验、缺失与资料不完整，不渲染未�
         appendix: "## 引用明细\n\n| 证据 | 资料期 |\n| --- | --- |\n| ev-test | 2026-06 |\n\nAPPENDIX_CANARY" },
     }));
     const ready = withAppendix("ready");
-    assert.match(ready, /<h2>研究结论<\/h2>/);
+    assert.match(ready, /<h2 id="fr-report-sec-0">研究结论<\/h2>/);
     assert.match(ready, /<strong>证据优先<\/strong>/);
     assert.match(ready, /<table>/); assert.match(ready, /APPENDIX_CANARY/);
     assert.match(ready, /证据附录/);

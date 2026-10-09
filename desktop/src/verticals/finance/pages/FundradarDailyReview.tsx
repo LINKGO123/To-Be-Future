@@ -13,6 +13,8 @@ import { ExternalLink, Pause, Play, RotateCcw, Square, Volume2 } from "lucide-re
 import { EChart } from "@/components/ui/EChart";
 import { useAiPage } from "../../../core/ai/pageContext";
 import { FrDataNotice } from "@/components/fundradar/FrDataNotice";
+import { FrSectionNav, type FrSection } from "@/components/fundradar/FrSectionNav";
+import { FrBackToTop } from "@/components/fundradar/FrBackToTop";
 import { FR_NEWS_PAGE_SIZE, FrPager } from "@/components/fundradar/FrPager";
 import { FrSkeleton, FrSkeletonCard, FrSkeletonChart, FrSkeletonList } from "@/components/fundradar/FrSkeleton";
 import { FrSourceFooter } from "@/components/fundradar/FrSourceFooter";
@@ -29,6 +31,19 @@ import {
   FR_EMOTION, FR_HEAT_RANK, FR_LADDER, FR_NEWS,
   FR_SUGGESTIONS, FR_YOUZI_SUMMARY, FR_ZHA_POOL, FR_ZHA_TOTAL, type FrZhaRow,
 } from "@/data/fundradarSample";
+
+/** 复盘页区块锚点（id 与下方各区块容器对应，供 FrSectionNav 滚动高亮） */
+const REVIEW_SECTIONS: FrSection[] = [
+  { id: "review-conclusion", label: "复盘结论" },
+  { id: "review-news", label: "今日要闻" },
+  { id: "review-morning", label: "今日晨报" },
+  { id: "review-mainline", label: "主线 Top3" },
+  { id: "review-ladder", label: "涨停梯队" },
+  { id: "review-zha", label: "炸板池" },
+  { id: "review-next", label: "次日关注" },
+  { id: "review-youzi", label: "游资动向" },
+  { id: "review-fit", label: "持仓吻合度" },
+];
 
 /** 涨停梯队渐变配色：连板越高蓝色越深（首板浅蓝 → 5板+深蓝），体现「越高越强」 */
 const LADDER_COLORS = [
@@ -127,7 +142,7 @@ function MorningBriefPlayer({ text, subtitle }: { text: string | null; subtitle:
 
   if (sections.length === 0) {
     return (
-      <div className="fr-glass p-5">
+      <div id="review-morning" className="fr-glass scroll-mt-16 p-5">
         <div className="mb-3 flex items-center justify-between gap-2">
           <h2 className="fr-body font-bold">今日晨报（精简版 · 约 1 分钟）</h2>
           <span className="fr-sub text-muted-foreground">{subtitle}</span>
@@ -253,7 +268,7 @@ function TodayNewsSection({ news, usingSample }: { news: FrNewsItem[]; usingSamp
   const pageItems = news.slice(pageStart, pageStart + FR_NEWS_PAGE_SIZE);
 
   return (
-    <section aria-label="今日要闻" className="fr-glass mt-4 p-5">
+    <section id="review-news" aria-label="今日要闻" className="fr-glass mt-4 scroll-mt-16 p-5">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="fr-body font-bold">今日要闻</h2>
         <span className="fr-sub text-muted-foreground">{usingSample ? "示例数据" : `共 ${news.length} 条`}</span>
@@ -396,8 +411,11 @@ export function FundradarDailyReview() {
 
         <FrDataNotice loading={loading} missing={failed ? ["全部数据"] : live?.missing ?? []} onRetry={retry} />
 
+        {/* 页内锚点导航：长页面区块快速定位（滚动时高亮当前区块） */}
+        <FrSectionNav sections={REVIEW_SECTIONS} />
+
         {/* 盘后复盘结论（AI 生成） */}
-        <div className="fr-glass mt-4 p-5">
+        <div id="review-conclusion" className="fr-glass mt-4 scroll-mt-16 p-5">
           <div className="mb-3 flex items-center justify-between gap-2">
             <h2 className="fr-body font-bold">今日复盘结论（AI 生成）</h2>
             <span className="fr-sub text-muted-foreground">{usingSample ? "示例数据不生成" : `盘后生成 · 数据日期 ${dataDate}`}</span>
@@ -425,7 +443,7 @@ export function FundradarDailyReview() {
             text={briefText}
             subtitle={usingSample ? "示例数据不生成" : (briefText ? `AI 生成 · 数据日期 ${dataDate}` : "待盘后生成")}
           />
-          <div className="fr-glass p-5">
+          <div id="review-mainline" className="fr-glass scroll-mt-16 p-5">
             <h2 className="fr-body mb-3 font-bold">今日主线（Top 3）</h2>
             <div className="space-y-2">
               {heatRows.slice(0, 3).map((h, i) => (
@@ -452,11 +470,11 @@ export function FundradarDailyReview() {
 
         {/* 梯队 + 炸板池 */}
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
-          <div className="fr-glass p-5">
+          <div id="review-ladder" className="fr-glass scroll-mt-16 p-5">
             <h2 className="fr-body mb-2 font-bold">涨停梯队</h2>
             <EChart option={ladderOption} height={170} />
           </div>
-          <div className="fr-glass p-5">
+          <div id="review-zha" className="fr-glass scroll-mt-16 p-5">
             <h2 className="fr-body mb-3 font-bold">炸板池（{zhaTotal}）</h2>
             {zhaRows.length === 0 && (
               <p className="fr-body py-4 text-muted-foreground">数据日炸板池为空。</p>
@@ -472,7 +490,7 @@ export function FundradarDailyReview() {
 
         {/* 次日关注清单 + 游资动向 */}
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
-          <div className="fr-glass p-5">
+          <div id="review-next" className="fr-glass scroll-mt-16 p-5">
             <h2 className="fr-body mb-3 font-bold">次日主线关注清单（盘后自动生成）</h2>
             {nextWatchLive ? (
               <div className="space-y-2">
@@ -500,7 +518,7 @@ export function FundradarDailyReview() {
               </div>
             )}
           </div>
-          <div className="fr-glass p-5">
+          <div id="review-youzi" className="fr-glass scroll-mt-16 p-5">
             <h2 className="fr-body mb-3 font-bold">今日知名游资动向</h2>
             <p className="fr-body leading-relaxed">{youziText}</p>
             <FrSourceFooter
@@ -513,7 +531,7 @@ export function FundradarDailyReview() {
         </div>
 
         {/* 吻合度（如实陈述） */}
-        <div className="fr-glass mt-4 p-5">
+        <div id="review-fit" className="fr-glass mt-4 scroll-mt-16 p-5">
           <h2 className="fr-body mb-3 font-bold">主线与持仓吻合度</h2>
           {usingSample ? (
             <p className="fr-body leading-relaxed">
@@ -553,6 +571,7 @@ export function FundradarDailyReview() {
         <p className="fr-sub mt-4 text-muted-foreground">
           进阶版原功能复盘页仍可用：<Link to="/daily-review-adv" className="text-primary hover:underline">原版每日复盘（进阶研究区）→</Link>
         </p>
+        <FrBackToTop />
       </div>
     </div>
   );

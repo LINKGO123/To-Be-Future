@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, Outlet, useLocation, useNavigation } from "react-router-dom";
 import {
-  BarChart3, ChevronDown, ChevronsLeft, ChevronsRight, ClipboardList, Cog, Cpu, FileText, Flame, FlaskConical, Gauge, Home, LayoutGrid, Microscope, Menu, X, MessageCircle, Moon, Newspaper, NotebookPen, Puzzle, Radar, Rss, Settings, Star, Sun, Swords, Thermometer, TrendingUp, Trophy, Type, Wallet, type LucideIcon,
+  ChevronDown, ChevronsLeft, ChevronsRight, Menu, Moon, Search, Sun, Type, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AiPageProvider } from "../../../../core/ai/pageContext";
@@ -17,76 +17,19 @@ import { FrAppUpdateBanner, FrAppUpdateButton } from "@/components/fundradar/FrA
 import { FrAutoRefreshBadge } from "@/components/fundradar/FrDataStatus";
 import { FrAlertWatcher } from "@/components/fundradar/FrAlertWatcher";
 import { startAutoRefresh, stopAutoRefresh } from "@/lib/fundradarAutoRefresh";
-
-interface NavItem { to: string; icon: LucideIcon; label: string; }
-
-// ============================================================
-// 资金雷达（刀3）· 侧栏双区：
-// 1. 常用区域 —— 八页常用大字 UI（首页/Agent 对话/主线雷达/每日复盘/报告/龙虎榜/我的持仓/设置）
-// 2. 进阶研究区 · 原功能 —— 底座原页面入口保留（内容组件未动）
-// ============================================================
-const NAV_CORE: NavItem[] = [
-  { to: "/", icon: Home, label: "首页" },
-  { to: "/agent-chat", icon: MessageCircle, label: "Agent 对话" },
-  { to: "/radar", icon: Radar, label: "主线雷达" },
-  { to: "/scoreboard", icon: Trophy, label: "评分榜" },
-  { to: "/daily-review", icon: BarChart3, label: "每日复盘" },
-  { to: "/report", icon: ClipboardList, label: "报告" },
-  { to: "/lhb", icon: Flame, label: "龙虎榜" },
-  { to: "/portfolio", icon: Wallet, label: "我的持仓" },
-  { to: "/settings", icon: Settings, label: "设置" },
-];
-
-const NAV_ADV: NavItem[] = [
-  { to: "/skills", icon: Puzzle, label: "技能中心" },
-  { to: "/intel", icon: Radar, label: "资讯雷达" },
-  { to: "/signals", icon: Thermometer, label: "产业信号" },
-  { to: "/sectors", icon: LayoutGrid, label: "板块中心" },
-  { to: "/research", icon: Microscope, label: "个股研究" },
-  { to: "/debate", icon: Swords, label: "多空辩论" },
-  { to: "/backtest", icon: FlaskConical, label: "回测" },
-  { to: "/watchlist", icon: Star, label: "自选股" },
-  { to: "/my-reports", icon: FileText, label: "我的研报" },
-  { to: "/notes", icon: NotebookPen, label: "研究记录" },
-];
-
-// 资讯雷达的小栏目（缩进子项，顺序即页内 Tab 顺序）。
-const INTEL_LINKS = [
-  { to: "/intel/investment-news", icon: Rss, label: "Investment News" },
-  { to: "/intel/news", icon: Newspaper, label: "公开新闻" },
-  { to: "/intel/filings", icon: FileText, label: "A股公告" },
-  { to: "/intel/events", icon: TrendingUp, label: "事件概率" },
-];
-
-// 产业信号的小栏目（缩进子项，逐期在此添加；带小三角可展开收起）。
-const SIGNAL_LINKS = [
-  { to: "/signals/gpu-rent", icon: Gauge, label: "GPU租金" },
-];
-
-// 常看的板块，作为「板块中心」下的快捷入口（缩进显示）。
-// 板块中心下的快捷入口。🔴 只放**环节已核实**的那些 —— 指向空页面的入口比没有入口更糟:
-// 用户点进去看到一片空白,分不清是"还没做"还是"坏了"。要加先把环节核实了。
-const SECTOR_LINKS = [
-  { to: "/sectors/humanoid", icon: Cog, label: "人形机器人" },
-  { to: "/sectors/ai-computing", icon: Cpu, label: "AI 算力" },
-];
-
-// 带子栏目的导航组：父项右侧小三角展开/收起，展开状态按组记忆。
-// 带子栏目的导航组。
-// 🔴 存储键**带版本号**：默认值从"展开"改成"收起"时，老键里存着的 "open"
-//    会让已经用过的人照旧全展开 —— 那不是 bug（它在记住你的选择），但新默认就等于没生效。
-//    换个键 = 旧记忆不再适用，所有人重新从收起开始；之后手动展开的仍然会被记住。
-const NAV_GROUPS: Record<string, { storageKey: string; links: typeof SIGNAL_LINKS }> = {
-  "/intel": { storageKey: "vr-intel-open2", links: INTEL_LINKS },
-  "/signals": { storageKey: "vr-signals-open2", links: SIGNAL_LINKS },
-  "/sectors": { storageKey: "vr-sectors-open2", links: SECTOR_LINKS },
-};
+import { NAV_ADV, NAV_CORE, NAV_GROUPS, type NavItem } from "@/lib/fundradarNav";
+import { FrCommandPalette } from "@/components/fundradar/FrCommandPalette";
+import { useCommandPalette } from "@/hooks/useCommandPalette";
+import { FrBreadcrumbMenu } from "@/components/fundradar/FrBreadcrumbMenu";
+import { useScrollProgress } from "@/hooks/useScrollProgress";
 
 export function Layout() {
   const { pathname } = useLocation();
   const navigation = useNavigation();
   const aiRuntime = useAiRuntime();
   const { dark, toggle } = useDarkMode();
+  const { open: paletteOpen, openPalette, closePalette } = useCommandPalette();
+  const scrollProgress = useScrollProgress(pathname);
   const navRef = useRef<HTMLElement | null>(null);
   const sidebarRef = useRef<HTMLElement | null>(null);
   const menuRef = useRef<HTMLButtonElement | null>(null);
@@ -331,18 +274,29 @@ export function Layout() {
           </div>
         </aside>
         <div inert={mobile && mobileOpen} className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          <header className="workspace-topbar flex h-16 shrink-0 items-center justify-between gap-3 px-4 md:px-8">
-            <div className="flex min-w-0 items-center gap-3 text-xs">
+          <header className="workspace-topbar relative flex h-16 shrink-0 items-center justify-between gap-3 px-4 md:px-8">
+            <div className="flex min-w-0 items-center gap-2 text-xs">
               <button ref={menuRef} aria-label="打开导航" onClick={() => setMobileOpen(true)} className="p-1 md:hidden"><Menu className="h-4 w-4" /></button>
-              <span className="hidden text-muted-foreground sm:inline">工作空间 /</span><strong className="truncate font-medium">{currentTitle}</strong>
+              <span className="hidden shrink-0 text-muted-foreground sm:inline">工作空间 /</span>
+              <FrBreadcrumbMenu current={currentTitle} />
             </div>
             <div className={cn("flex items-center gap-3", pathname !== "/" && "mr-24")}>
               <FrAutoRefreshBadge />
               <span className="hidden text-xs text-muted-foreground lg:inline">本地金融研究工作台</span>
+              <button onClick={openPalette} aria-label="搜索页面（Cmd+K）" title="搜索页面（Cmd+K）"
+                className="fr-icon-btn text-muted-foreground hover:text-foreground">
+                <Search className="h-4 w-4" />
+              </button>
               <button onClick={toggle} className="fr-icon-btn text-muted-foreground hover:text-foreground" aria-label={dark ? "切换为浅色" : "切换为深色"}>
                 {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </button>
             </div>
+            {/* 滚动进度条：页面滚动位置感知（内容不足一屏时不显示） */}
+            {scrollProgress !== null && (
+              <div aria-hidden="true"
+                className="absolute bottom-0 left-0 h-0.5 bg-primary/80 transition-[width] duration-100"
+                style={{ width: `${Math.min(100, Math.max(0, scrollProgress * 100))}%` }} />
+            )}
           </header>
           <main ref={mainRef} id="workspace-main" tabIndex={-1} className="min-h-0 flex-1 overflow-auto">
             <div className="workspace-content" aria-busy={navigation.state !== "idle"}>
@@ -360,6 +314,8 @@ export function Layout() {
         <FrAlertWatcher />
         {/* 应用自动更新横幅：发现新版本 / 下载中 / 下载完成 / 检查失败时右下角弹出 */}
         <FrAppUpdateBanner />
+        {/* 菜单搜索弹层（Cmd+K / Ctrl+K）：快捷键或顶栏搜索按钮唤起 */}
+        <FrCommandPalette open={paletteOpen} onClose={closePalette} />
       </div>
     </AiPageProvider>
   );
