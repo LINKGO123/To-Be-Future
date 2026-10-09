@@ -16,12 +16,23 @@ import { ArrowLeft, Sparkles } from "lucide-react";
 
 import { useAiPage } from "../../../core/ai/pageContext";
 import { FrDataNotice } from "@/components/fundradar/FrDataNotice";
+import { FrSectionNav, type FrSection } from "@/components/fundradar/FrSectionNav";
+import { FrSectionRail } from "@/components/fundradar/FrSectionRail";
+import { FrBackToTop } from "@/components/fundradar/FrBackToTop";
 import { FrSkeleton, FrSkeletonCard, FrSkeletonChart } from "@/components/fundradar/FrSkeleton";
 import { FrAnimatedNumber, FrChangePop } from "@/components/fundradar/FrAnimatedNumber";
 import { FrStockChart } from "@/components/fundradar/FrStockChart";
 import { FrFlowTrendChart, type FrFlowTrendPoint } from "@/components/fundradar/FrFlowTrendChart";
 import { FrSourceFooter } from "@/components/fundradar/FrSourceFooter";
 import { FrStockSectorNews } from "@/components/fundradar/FrSectorNews";
+
+/** 个股详情页区块锚点（id 与下方各 section 对应） */
+const STOCK_SECTIONS: FrSection[] = [
+  { id: "stock-head", label: "个股头卡" },
+  { id: "stock-kline", label: "K 线" },
+  { id: "stock-flow", label: "资金流向" },
+  { id: "stock-lhb", label: "龙虎榜记录" },
+];
 import {
   consecutiveFlow, loadStockFundFlow, loadStockIntraday, loadStockLive, mainNetRatio,
   type FrFlowDims, type FrFlowLive, type FrFlowPoint, type FrKlineLive, type FrLhbSeat, type FrLhbStock, type FrStockLive,
@@ -57,7 +68,7 @@ function HeaderCard({ code, live }: { code: string; live: FrStockLive }) {
   const holdings = useHoldings();
   const holding = holdings.some((h) => h.code === code);
   return (
-    <section aria-label="个股头卡" className="fr-glass mb-4 rounded-xl p-5">
+    <section id="stock-head" aria-label="个股头卡" className="fr-glass mb-4 scroll-mt-16 rounded-xl p-5">
       <div className="mb-3 flex flex-wrap items-center gap-3">
         <Link to="/" className="fr-sub fr-tap flex items-center gap-1.5 rounded-btn border border-border px-3 py-1.5 text-muted-foreground hover:border-primary/50 hover:text-primary">
           <ArrowLeft className="h-4 w-4" aria-hidden="true" /> 返回
@@ -168,7 +179,7 @@ function KlineSection({
   const hasIntraday = intraday.minutes !== null && intraday.minutes.length > 0;
 
   return (
-    <section aria-label="K线区" className="fr-glass mb-4 rounded-xl p-5">
+    <section id="stock-kline" aria-label="K线区" className="fr-glass mb-4 scroll-mt-16 rounded-xl p-5">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <h2 className="fr-body font-bold">K 线</h2>
         <div className="flex flex-wrap gap-2" role="group" aria-label="K线模式">
@@ -335,7 +346,7 @@ function FlowSection({ flow, kline }: { flow: FrFlowLive | null; kline: FrKlineL
       ].filter((x): x is string => typeof x === "string" && x.length > 0);
 
   return (
-    <section aria-label="资金流向" className="fr-glass mb-4 rounded-xl p-5">
+    <section id="stock-flow" aria-label="资金流向" className="fr-glass mb-4 scroll-mt-16 rounded-xl p-5">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <h2 className="fr-body font-bold">资金流向</h2>
       </div>
@@ -511,7 +522,7 @@ function SeatRow({ seat }: { seat: FrLhbSeat }) {
 function LhbSection({ lhb }: { lhb: FrLhbStock | null }) {
   if (!lhb) {
     return (
-      <section aria-label="龙虎榜记录" className="fr-glass mb-4 rounded-xl p-5">
+      <section id="stock-lhb" aria-label="龙虎榜记录" className="fr-glass mb-4 scroll-mt-16 rounded-xl p-5">
         <h2 className="fr-body font-bold">龙虎榜记录</h2>
         <p className="fr-sub mt-2 text-muted-foreground">个股龙虎榜数据暂不可用（取数失败）。</p>
       </section>
@@ -521,7 +532,7 @@ function LhbSection({ lhb }: { lhb: FrLhbStock | null }) {
   const buySeats = lhb.seats.buy.slice(0, 5);
   const sellSeats = lhb.seats.sell.slice(0, 5);
   return (
-    <section aria-label="龙虎榜记录" className="fr-glass mb-4 rounded-xl p-5">
+    <section id="stock-lhb" aria-label="龙虎榜记录" className="fr-glass mb-4 scroll-mt-16 rounded-xl p-5">
       <h2 className="fr-body font-bold">龙虎榜记录
         <span className="fr-sub ml-2 font-normal text-muted-foreground">近 30 日上榜 {lhb.count} 次</span>
       </h2>
@@ -707,6 +718,10 @@ export function FundradarStock() {
       <div className="fr-fade-in mx-auto max-w-[1500px]">
         <FrDataNotice loading={loading} missing={failed ? ["全部数据"] : live?.missing ?? []} onRetry={retry} />
 
+        {/* 页内锚点导航 + 右侧章节导轨 */}
+        <FrSectionNav sections={STOCK_SECTIONS} />
+        <FrSectionRail sections={STOCK_SECTIONS} />
+
         {live && <HeaderCard code={normalized} live={live} />}
 
         {!live && !loading && (
@@ -748,6 +763,7 @@ export function FundradarStock() {
           </ul>
         </details>
       </div>
+      <FrBackToTop />
     </div>
   );
 }

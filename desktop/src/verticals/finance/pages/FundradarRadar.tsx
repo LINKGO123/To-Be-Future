@@ -11,6 +11,9 @@ import type { EChartsCoreOption } from "echarts/core";
 import { EChart } from "@/components/ui/EChart";
 import { useAiPage } from "../../../core/ai/pageContext";
 import { FrDataNotice } from "@/components/fundradar/FrDataNotice";
+import { FrSectionNav, type FrSection } from "@/components/fundradar/FrSectionNav";
+import { FrSectionRail } from "@/components/fundradar/FrSectionRail";
+import { FrBackToTop } from "@/components/fundradar/FrBackToTop";
 import { FrSkeleton, FrSkeletonCard, FrSkeletonChart, FrSkeletonList } from "@/components/fundradar/FrSkeleton";
 import {
   FR_HOLDING_META, frCoveredHoldings, frDateLabel, loadRadarCore, useFrLoader,
@@ -20,6 +23,14 @@ import { frChartGray, useFrDark } from "@/lib/fundradarTheme";
 import {
   FR_EMOTION, FR_HEAT_RANK, FR_LADDER, FR_SUGGESTIONS, FR_ZHA_POOL, FR_ZHA_TOTAL, type FrZhaRow,
 } from "@/data/fundradarSample";
+
+/** 主线雷达页区块锚点（id 与下方各区块容器对应） */
+const RADAR_SECTIONS: FrSection[] = [
+  { id: "radar-heat", label: "热度榜" },
+  { id: "radar-ladder", label: "涨停梯队" },
+  { id: "radar-zha", label: "炸板池" },
+  { id: "radar-fit", label: "持仓吻合度" },
+];
 
 /** 热度榜横向条形图（原型同款配色与密度；tooltip 按真实数据行渲染） */
 function useHeatOption(rows: FrHeatRow[]): EChartsCoreOption {
@@ -225,6 +236,10 @@ export function FundradarRadar() {
       <div className="fr-screen-dark fr-fade-in mx-auto max-w-[1700px] rounded-2xl p-6">
         <FrDataNotice loading={loading} missing={failed ? ["全部数据"] : live?.missing ?? []} onRetry={retry} />
 
+        {/* 页内锚点导航 + 右侧章节导轨 */}
+        <FrSectionNav sections={RADAR_SECTIONS} />
+        <FrSectionRail sections={RADAR_SECTIONS} />
+
         {/* 顶部：标题 + KPI 条 */}
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -249,7 +264,7 @@ export function FundradarRadar() {
 
         {/* 主区：热度榜 + 右侧（梯队/炸板池） */}
         <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
-          <div className="fr-glass p-5">
+          <div id="radar-heat" className="fr-glass scroll-mt-16 p-5">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="fr-body font-bold">主线板块热度榜</h2>
               <button type="button" className="fr-sub rounded-btn border border-border px-2.5 py-1 text-muted-foreground hover:border-primary/40 hover:text-primary">
@@ -285,11 +300,11 @@ export function FundradarRadar() {
           </div>
 
           <div className="flex flex-col gap-4">
-            <div className="fr-glass p-5">
+            <div id="radar-ladder" className="fr-glass scroll-mt-16 p-5">
               <h2 className="fr-body mb-2 font-bold">涨停梯队</h2>
               <EChart option={ladderOption} height={145} />
             </div>
-            <div className="fr-glass flex-1 p-5">
+            <div id="radar-zha" className="fr-glass flex-1 scroll-mt-16 p-5">
               <h2 className="fr-body mb-3 font-bold">炸板池（{zhaTotal}）</h2>
               {zhaRows.length === 0 && (
                 <p className="fr-body py-4 text-muted-foreground">数据日炸板池为空。</p>
@@ -308,7 +323,7 @@ export function FundradarRadar() {
         </div>
 
         {/* 吻合度（如实陈述，不构成建议） */}
-        <div className="fr-glass mt-4 p-5">
+        <div id="radar-fit" className="fr-glass mt-4 scroll-mt-16 p-5">
           <h2 className="fr-body mb-3 font-bold">主线与持仓吻合度</h2>
           {usingSample ? (
             <p className="fr-body leading-relaxed">
@@ -333,6 +348,7 @@ export function FundradarRadar() {
           )}
         </div>
       </div>
+      <FrBackToTop />
     </div>
   );
 }

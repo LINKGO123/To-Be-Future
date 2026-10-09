@@ -282,8 +282,12 @@ export function Layout() {
               <FrAutoRefreshBadge />
               <span className="hidden text-xs text-muted-foreground lg:inline">本地金融研究工作台</span>
               <button onClick={openPalette} aria-label="搜索页面（Cmd+K）" title="搜索页面（Cmd+K）"
-                className="fr-icon-btn text-muted-foreground hover:text-foreground">
+                className="flex h-9 items-center gap-2 rounded-btn border border-border bg-muted/30 px-3 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
                 <Search className="h-4 w-4" />
+                <span className="hidden md:inline">搜索</span>
+                <kbd className="hidden rounded border border-border bg-card px-1.5 py-0.5 text-[10px] font-semibold md:inline">
+                  {typeof navigator !== "undefined" && /Mac|iPhone|iPad/i.test(navigator.platform ?? "") ? "⌘K" : "Ctrl K"}
+                </kbd>
               </button>
               <button onClick={toggle} className="fr-icon-btn text-muted-foreground hover:text-foreground" aria-label={dark ? "切换为浅色" : "切换为深色"}>
                 {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
