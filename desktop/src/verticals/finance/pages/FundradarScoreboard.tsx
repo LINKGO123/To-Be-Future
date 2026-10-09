@@ -1,18 +1,19 @@
 /**
  * 资金雷达工作台 · 评分榜页（/scoreboard）
  * ------------------------------------------------------------
- * 双榜：综合榜（评分 ≥60 且 Top20，纯评分排序）+ 资金榜（主力净流入金额排序）。
- * - 顶部常驻免责横幅 + 板块勾选（默认科技链）+ 双榜 Tab + 重新计算 + 更新时间。
+ * 模块卡片墙（首页）：12 个行业模块卡片（名称/股票数/平均分/Top3），点卡片进入板块榜单。
+ * 板块内榜单：双榜 —— 综合榜（评分 ≥60 且 Top20，纯评分排序）+ 资金榜（主力净流入金额排序）。
+ * - 顶部常驻免责横幅 + 更新于；板块内工具栏「重新计算」+ 双榜 Tab + 进度提示。
  * - Top3 大卡（第 1 名蓝框 + 蓝序号）+ 列表（排名/名称代码/评分大字/涨跌幅/资金方向）。
  * - 点击 → 跳转 /report?code=<code>，复用报告页下钻（评分构成/结论/短长期倾向/风险）。
  * - 自选：手动输 6 位代码加，与持仓分开（lib/fundradarWatchlist）。
  * - 缺失处理：资金/估值缺失 → 该项记 0 分并标注「数据缺」（见 fundradarScoreBatch）。
- * - 批量评分：手动「重新计算」触发（MVP），复用 scoreComposite 同一口径，并发限流 3。
+ * - 批量评分：板块内手动「重新计算」触发，复用 scoreComposite 同一口径，并发限流 3。
  * 红线：评分仅基于公开数据计算，不构成任何投资建议。
  */
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { BarChart3, Check, Info, LoaderCircle, ListChecks, Plus, RefreshCw, TrendingUp, Trophy, X } from "lucide-react";
+import { ArrowLeft, BarChart3, Check, ChevronRight, Info, LoaderCircle, ListChecks, Plus, RefreshCw, TrendingUp, Trophy, X } from "lucide-react";
 
 import {
   FR_SCORE_CACHE_CHANGED,
@@ -22,7 +23,7 @@ import {
   type BatchProgress,
   type ScoreCacheItem,
 } from "@/lib/fundradarScoreBatch";
-import { SCORE_POOL_SECTORS, type ScorePoolSectorId } from "@/lib/fundradarScorePool";
+import { SCORE_POOL_SECTORS, scorePoolSector, type ScorePoolSectorId } from "@/lib/fundradarScorePool";
 import { addScorePoolCustomItem, removeScorePoolCustomItem, useScorePoolCustom } from "@/lib/fundradarScorePoolCustom";
 import { loadStockQuote } from "@/lib/fundradarStock";
 import { frPctClass } from "@/lib/fundradarTheme";
@@ -68,9 +69,8 @@ export function FundradarScoreboard() {
   const watchlist = useWatchlist();
   const customPool = useScorePoolCustom();
 
-  const [checked, setChecked] = useState<Record<ScorePoolSectorId, boolean>>(() => ({
-    tech: true, finance: false, newenergy: false, pharma: false,
-  }));
+  // null = 模块卡片墙（首页视图）；非 null = 该板块的榜单视图
+  const [activeSector, setActiveSector] = useState<ScorePoolSectorId | null>(null);
   const [tab, setTab] = useState<"composite" | "flow">("composite");
   const [cache, setCache] = useState<ScoreCacheItem[]>(() => loadScoreCache());
   const [updatedAt, setUpdatedAt] = useState<string | null>(() => loadScoreCacheUpdated());
@@ -104,13 +104,13 @@ export function FundradarScoreboard() {
     return m;
   }, [customPool, watchlist]);
 
-  // 纳入评分的候选池 = 勾选板块 + 自定义 + 自选（去重）
+  // 纳入评分的候选池 = 当前板块 ∪ 自定义 ∪ 自选（去重）
   const selectedPool = useMemo(() => {
     const list: { code: string; name: string }[] = [];
     const seen = new Set<string>();
-    for (const s of SCORE_POOL_SECTORS) {
-      if (!checked[s.id]) continue;
-      for (const st of s.stocks) {
+    const sector = activeSector ? scorePoolSector(activeSector) : undefined;
+    if (sector) {
+      for (const st of sector.stocks) {
         if (!seen.has(st.code)) {
           seen.add(st.code);
           list.push(st);
@@ -130,7 +130,7 @@ export function FundradarScoreboard() {
       }
     }
     return list;
-  }, [checked, customPool, watchlist]);
+  }, [activeSector, customPool, watchlist]);
 
   const visible = useMemo(() => {
     const set = new Set(selectedPool.map((s) => s.code));
@@ -166,6 +166,19 @@ export function FundradarScoreboard() {
     return set.size;
   }, [customPool, watchlist]);
 
+  // 模块卡片墙：每个板块的评分概览（已评分数 / 平均分 / Top3），数据取自评分缓存
+  const sectorStats = useMemo(() => {
+    return SCORE_POOL_SECTORS.map((s) => {
+      const codes = new Set(s.stocks.map((x) => x.code));
+      const scored = cache.filter((it) => codes.has(it.code));
+      const sorted = [...scored].sort((a, b) => b.score - a.score);
+      const avg = scored.length > 0
+        ? Math.round(scored.reduce((a, b) => a + b.score, 0) / scored.length)
+        : null;
+      return { sector: s, scoredCount: scored.length, avg, top3: sorted.slice(0, 3) };
+    });
+  }, [cache]);
+
   const displayName = (it: ScoreCacheItem): string =>
     it.name && it.name !== it.code ? it.name : (nameMap.get(it.code) ?? it.code);
   const hasDataGap = (it: ScoreCacheItem): boolean => it.missing.includes("资金") || it.missing.includes("估值");
@@ -179,10 +192,6 @@ export function FundradarScoreboard() {
   }, [updatedAt]);
 
   /* ---------------- 交互 ---------------- */
-
-  const toggleSector = (id: ScorePoolSectorId): void => {
-    setChecked((c) => ({ ...c, [id]: !c[id] }));
-  };
 
   const openStock = (code: string): void => {
     navigate(`/report?code=${code}`);
@@ -256,6 +265,7 @@ export function FundradarScoreboard() {
   };
 
   const progressPct = progress && progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
+  const activeSectorObj = activeSector ? scorePoolSector(activeSector) : undefined;
 
   /* ---------------- 渲染 ---------------- */
 
@@ -264,14 +274,28 @@ export function FundradarScoreboard() {
       <div className="fr-fade-in mx-auto max-w-[1500px]">
         <h1 className="sr-only">资金雷达 · 评分榜</h1>
 
-        {/* 头 */}
+        {/* 头（随视图变化：卡片墙标题 vs 板块标题 + 返回） */}
         <section className="mb-4 flex flex-wrap items-center gap-3">
           <span className="flex size-10 items-center justify-center rounded-btn bg-primary-subtle-strong text-primary">
             <Trophy className="h-5 w-5" aria-hidden="true" />
           </span>
           <div className="min-w-0 flex-1">
-            <h2 className="fr-title font-bold">评分榜</h2>
-            <p className="fr-sub text-muted-foreground">基于公开数据的评分排名 · 综合榜 / 资金榜</p>
+            {activeSector ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <button type="button" onClick={() => setActiveSector(null)}
+                  className="fr-sub fr-tap inline-flex items-center gap-1 rounded-btn border border-border px-2.5 py-1 font-bold text-muted-foreground hover:text-foreground">
+                  <ArrowLeft className="h-4 w-4" aria-hidden="true" /> 全部模块
+                </button>
+                <h2 className="fr-title font-bold">{activeSectorObj?.label}评分榜</h2>
+              </div>
+            ) : (
+              <h2 className="fr-title font-bold">评分榜</h2>
+            )}
+            <p className="fr-sub text-muted-foreground">
+              {activeSector
+                ? `${activeSectorObj?.label}候选池 · 综合榜 / 资金榜`
+                : "12 个行业模块 · 点卡片进入板块榜单"}
+            </p>
           </div>
           <span className="fr-sub text-muted-foreground">更新于 {updatedLabel}</span>
         </section>
@@ -282,52 +306,86 @@ export function FundradarScoreboard() {
           <p className="fr-sub leading-relaxed text-muted-foreground">{DISCLAIMER}</p>
         </div>
 
-        {/* 工具栏：板块筛选 + 重新计算 */}
-        <section aria-label="板块筛选与批量评分" className="fr-glass mb-4 rounded-xl p-4">
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-            <span className="fr-sub font-bold text-muted-foreground">纳入评分板块</span>
-            {SCORE_POOL_SECTORS.map((s) => (
-              <label key={s.id} className="fr-sub flex cursor-pointer items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={checked[s.id]}
-                  onChange={() => toggleSector(s.id)}
-                  className="h-4 w-4 accent-[hsl(var(--primary))]"
-                  aria-label={`纳入 ${s.label}`}
-                />
-                <span>{s.label}</span>
-                <span className="text-muted-foreground/70">{s.stocks.length}</span>
-              </label>
-            ))}
-            <div className="ml-auto flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => void recompute()}
-                disabled={running || selectedPool.length === 0}
-                className="fr-sub fr-tap fr-press inline-flex items-center gap-2 rounded-btn bg-primary px-5 py-2 font-bold text-primary-foreground disabled:opacity-60"
-              >
-                {running ? <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden="true" /> : <RefreshCw className="h-5 w-5" aria-hidden="true" />}
-                {running ? "计算中…" : "重新计算"}
+        {activeSector === null ? (
+          /* ============ 模块卡片墙（首页视图） ============ */
+          <section aria-label="行业模块" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {sectorStats.map(({ sector, scoredCount, avg, top3 }) => (
+              <button key={sector.id} type="button" onClick={() => setActiveSector(sector.id)}
+                className="group rounded-xl border border-border bg-card p-4 text-left shadow-[var(--fr-shadow-sm)] transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-[0_8px_24px_hsl(var(--primary)/0.18)]">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="fr-body font-bold">{sector.label}</span>
+                  <span className="fr-sub text-muted-foreground">{sector.stocks.length} 只</span>
+                </div>
+                <div className="mt-3 flex items-end gap-2">
+                  {avg !== null ? (
+                    <>
+                      <span className="fr-num leading-none" style={{ fontSize: "calc(var(--fs-num) * 1.1)" }}>
+                        <span className={scoreClass(avg)}>{avg}</span>
+                      </span>
+                      <span className="fr-sub mb-0.5 text-muted-foreground">
+                        平均分 · {scoredCount}/{sector.stocks.length} 已算
+                      </span>
+                    </>
+                  ) : (
+                    <span className="fr-sub text-muted-foreground">尚未计算 · 进入后点「重新计算」</span>
+                  )}
+                </div>
+                {top3.length > 0 && (
+                  <ul className="mt-3 space-y-1.5 border-t border-border pt-2.5">
+                    {top3.map((it, i) => (
+                      <li key={it.code} className="fr-sub flex items-center gap-2">
+                        <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${i === 0 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`} aria-hidden="true">{i + 1}</span>
+                        <span className="min-w-0 flex-1 truncate font-bold">{displayName(it)}</span>
+                        <span className={`font-bold ${scoreClass(it.score)}`}>{it.score}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <p className="fr-sub mt-3 inline-flex items-center gap-1 font-bold text-primary group-hover:underline">
+                  进入板块 <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                </p>
               </button>
-            </div>
-          </div>
-          {running && progress && (
-            <div className="mt-3">
-              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                <div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${progressPct}%` }} />
+            ))}
+          </section>
+        ) : (
+          <>
+            {/* ============ 板块内榜单视图 ============ */}
+
+            {/* 工具栏：候选池说明 + 重新计算 */}
+            <section aria-label="板块批量评分" className="fr-glass mb-4 rounded-xl p-4">
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+                <span className="fr-sub font-bold text-muted-foreground">
+                  {activeSectorObj?.label}候选池 {selectedPool.length} 只（板块 ∪ 自定义 ∪ 自选）
+                </span>
+                <div className="ml-auto flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void recompute()}
+                    disabled={running || selectedPool.length === 0}
+                    className="fr-sub fr-tap fr-press inline-flex items-center gap-2 rounded-btn bg-primary px-5 py-2 font-bold text-primary-foreground disabled:opacity-60"
+                  >
+                    {running ? <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden="true" /> : <RefreshCw className="h-5 w-5" aria-hidden="true" />}
+                    {running ? "计算中…" : "重新计算"}
+                  </button>
+                </div>
               </div>
-              <p className="fr-sub mt-1.5 text-muted-foreground">
-                已算 {progress.done}/{progress.total} · 成功 {progress.ok} · 失败 {progress.failed}
-                {progress.current ? ` · 当前 ${progress.current}` : ""}
-              </p>
-            </div>
-          )}
-          {!running && unscoredCount > 0 && (
-            <p className="fr-sub mt-2 text-muted-foreground">
-              当前筛选内有 {unscoredCount} 只尚未计算，点击「重新计算」后纳入榜单。
-            </p>
-          )}
-        </section>
+              {running && progress && (
+                <div className="mt-3">
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                    <div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${progressPct}%` }} />
+                  </div>
+                  <p className="fr-sub mt-1.5 text-muted-foreground">
+                    已算 {progress.done}/{progress.total} · 成功 {progress.ok} · 失败 {progress.failed}
+                    {progress.current ? ` · 当前 ${progress.current}` : ""}
+                  </p>
+                </div>
+              )}
+              {!running && unscoredCount > 0 && (
+                <p className="fr-sub mt-2 text-muted-foreground">
+                  当前候选池内有 {unscoredCount} 只尚未计算，点击「重新计算」后纳入榜单。
+                </p>
+              )}
+            </section>
 
         {/* 双榜 Tab */}
         <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -360,8 +418,8 @@ export function FundradarScoreboard() {
             <p className="fr-body font-bold">{visible.length === 0 ? "暂无评分数据" : "当前榜单无满足条件个股"}</p>
             <p className="fr-sub mt-2 text-muted-foreground">
               {visible.length === 0
-                ? "点击上方「重新计算」对勾选板块批量评分（首次计算需要一点时间）。"
-                : "综合榜仅显示评分 ≥60 的个股；可切换资金榜或调整板块筛选。"}
+                ? "点击上方「重新计算」对当前板块批量评分（首次计算需要一点时间）。"
+                : "综合榜仅显示评分 ≥60 的个股；可切换资金榜。"}
             </p>
           </section>
         )}
@@ -462,8 +520,10 @@ export function FundradarScoreboard() {
             </ul>
           </section>
         )}
+          </>
+        )}
 
-        {/* 自选管理 */}
+        {/* 自选管理（两个视图共用） */}
         <section aria-label="自选管理" className="fr-glass mt-4 rounded-xl p-4">
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <span className="fr-sub font-bold text-muted-foreground">自选（与持仓分开）</span>
@@ -521,7 +581,7 @@ export function FundradarScoreboard() {
             {" · "}自定义 {customPool.length} · 自选 {watchlist.length} · 合计 {poolTotal}（去重）
           </p>
           <p className="fr-sub mt-1 text-muted-foreground">
-            候选池 = 勾选板块 ∪ 自定义 ∪ 自选（去重），点击「重新计算」后纳入榜单评分。
+            候选池 = 当前板块 ∪ 自定义 ∪ 自选（去重），在板块内点「重新计算」后纳入榜单评分。
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-1.5 rounded-input border border-border bg-muted px-3 py-2">
