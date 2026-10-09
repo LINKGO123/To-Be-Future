@@ -14,6 +14,7 @@ import { EChart } from "@/components/ui/EChart";
 import { useAiPage } from "../../../core/ai/pageContext";
 import { FrDataNotice } from "@/components/fundradar/FrDataNotice";
 import { FrSectionNav, type FrSection } from "@/components/fundradar/FrSectionNav";
+import { FrSectionRail } from "@/components/fundradar/FrSectionRail";
 import { FrBackToTop } from "@/components/fundradar/FrBackToTop";
 import { FR_NEWS_PAGE_SIZE, FrPager } from "@/components/fundradar/FrPager";
 import { FrSkeleton, FrSkeletonCard, FrSkeletonChart, FrSkeletonList } from "@/components/fundradar/FrSkeleton";
@@ -413,6 +414,8 @@ export function FundradarDailyReview() {
 
         {/* 页内锚点导航：长页面区块快速定位（滚动时高亮当前区块） */}
         <FrSectionNav sections={REVIEW_SECTIONS} />
+        {/* 右侧章节导轨：大屏滚动位置指示（竖线变长 + 当前区块名） */}
+        <FrSectionRail sections={REVIEW_SECTIONS} />
 
         {/* 盘后复盘结论（AI 生成） */}
         <div id="review-conclusion" className="fr-glass mt-4 scroll-mt-16 p-5">

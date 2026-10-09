@@ -6,6 +6,7 @@ import type { Components } from "react-markdown";
 import { appendixIds, citationPlugin } from "../lib/reportCitations";
 import { extractMarkdownH2 } from "../lib/fundradarNav";
 import { FrSectionNav, type FrSection } from "./fundradar/FrSectionNav";
+import { FrSectionRail } from "./fundradar/FrSectionRail";
 
 // Do not execute HTML or load remote images from untrusted report text.
 const markdownComponents = {
@@ -56,6 +57,7 @@ export function ResearchReport({ result }: { result: Awaited<ReturnType<typeof b
   return <>
     {result.run_status === "incomplete" && <p role="status" className="mb-2 text-sm text-muted-foreground">这份报告资料不完整，请先查看报告中的数据缺口。</p>}
     {sections.length > 1 && <FrSectionNav sections={sections} />}
+    {sections.length > 1 && <FrSectionRail sections={sections} />}
     <div className={result.appendix ? "grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(260px,.65fr)]" : "min-w-0"}>
       <article className="research-paper rounded border border-border" aria-label="已校验研究报告">
         <p className="workspace-kicker mb-6 border-b border-border pb-4">To Be Future / Research Note</p>

@@ -24,6 +24,7 @@ import { FrReportChart } from "@/components/fundradar/FrReportChart";
 import { FrFlowTrendChart, type FrFlowTrendPoint } from "@/components/fundradar/FrFlowTrendChart";
 import { FrSourceFooter } from "@/components/fundradar/FrSourceFooter";
 import { FrSectionNav, type FrSection } from "@/components/fundradar/FrSectionNav";
+import { FrSectionRail } from "@/components/fundradar/FrSectionRail";
 import { FrBackToTop } from "@/components/fundradar/FrBackToTop";
 import { FR_DISCLAIMER } from "@/data/fundradarSample";
 import { frDateLabel, frEndpointCn } from "@/lib/fundradarData";
@@ -514,6 +515,8 @@ export function FundradarReport() {
 
             {/* 页内锚点导航：报告长页快速定位（滚动时高亮当前区块） */}
             <FrSectionNav sections={REPORT_SECTIONS} />
+            {/* 右侧章节导轨：大屏滚动位置指示 */}
+            <FrSectionRail sections={REPORT_SECTIONS} />
 
             {/* 头卡 + 综合评分横幅 */}
             <section id="report-head" aria-label="报告头卡与综合评分" className="fr-glass fr-glass-accent mb-5 scroll-mt-16 rounded-xl p-5">

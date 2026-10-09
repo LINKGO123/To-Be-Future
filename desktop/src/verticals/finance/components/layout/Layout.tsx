@@ -21,7 +21,6 @@ import { NAV_ADV, NAV_CORE, NAV_GROUPS, type NavItem } from "@/lib/fundradarNav"
 import { FrCommandPalette } from "@/components/fundradar/FrCommandPalette";
 import { useCommandPalette } from "@/hooks/useCommandPalette";
 import { FrBreadcrumbMenu } from "@/components/fundradar/FrBreadcrumbMenu";
-import { useScrollProgress } from "@/hooks/useScrollProgress";
 
 export function Layout() {
   const { pathname } = useLocation();
@@ -29,7 +28,6 @@ export function Layout() {
   const aiRuntime = useAiRuntime();
   const { dark, toggle } = useDarkMode();
   const { open: paletteOpen, openPalette, closePalette } = useCommandPalette();
-  const scrollProgress = useScrollProgress(pathname);
   const navRef = useRef<HTMLElement | null>(null);
   const sidebarRef = useRef<HTMLElement | null>(null);
   const menuRef = useRef<HTMLButtonElement | null>(null);
@@ -291,12 +289,6 @@ export function Layout() {
                 {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </button>
             </div>
-            {/* 滚动进度条：页面滚动位置感知（内容不足一屏时不显示） */}
-            {scrollProgress !== null && (
-              <div aria-hidden="true"
-                className="absolute bottom-0 left-0 h-0.5 bg-primary/80 transition-[width] duration-100"
-                style={{ width: `${Math.min(100, Math.max(0, scrollProgress * 100))}%` }} />
-            )}
           </header>
           <main ref={mainRef} id="workspace-main" tabIndex={-1} className="min-h-0 flex-1 overflow-auto">
             <div className="workspace-content" aria-busy={navigation.state !== "idle"}>
