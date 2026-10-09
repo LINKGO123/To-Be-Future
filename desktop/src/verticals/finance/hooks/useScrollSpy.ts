@@ -21,7 +21,10 @@ export function useScrollSpy(ids: string[]): string {
           if (entry.isIntersecting) setActive(entry.target.id);
         }
       },
-      { rootMargin: "-15% 0px -75% 0px", threshold: 0 },
+      // 检测带：视口顶部约 128px（顶栏 64px + 区块 scroll-mt-16 的 64px）到 20% 处。
+      // 与 scrollIntoView(block:"start") + scroll-mt-16 的停靠位置对齐：
+      // 区块顶正好停在停靠点时进入检测带，高亮切换与「跳转后的位置」一致。
+      { rootMargin: "-128px 0px -80% 0px", threshold: 0 },
     );
     els.forEach((el) => observer.observe(el));
     return () => observer.disconnect();
