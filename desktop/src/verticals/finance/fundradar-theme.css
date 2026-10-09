@@ -1053,3 +1053,27 @@ html:not(.dark) .fr-screen-dark {
   pointer-events: none;
 }
 .fr-toast-viewport > * { pointer-events: auto; width: 100%; }
+
+/* ============================================================
+   右侧章节导轨（FrSectionRail）动画
+   ============================================================ */
+/* 进场：从右侧滑入 + 淡入（用 margin 动画避免与 -translate-y-1/2 冲突） */
+@keyframes fr-rail-in {
+  from { opacity: 0; margin-right: -14px; }
+  to { opacity: 1; margin-right: 0; }
+}
+.fr-rail-enter { animation: fr-rail-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* 当前区块名切换：上滑淡入 */
+@keyframes fr-rail-label-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.fr-rail-label { animation: fr-rail-label-in 0.28s ease-out both; }
+
+/* 当前节点脉冲光环（与 animate-ping 叠加的柔光） */
+@keyframes fr-rail-glow {
+  0%, 100% { box-shadow: 0 0 6px hsl(var(--primary) / 0.8), 0 0 16px hsl(var(--primary) / 0.35); }
+  50% { box-shadow: 0 0 12px hsl(var(--primary) / 1), 0 0 28px hsl(var(--primary) / 0.55); }
+}
+.fr-rail-active-dot { animation: fr-rail-glow 2s ease-in-out infinite; }
