@@ -38,13 +38,17 @@ win:
   icon: build/icon.png
 
 mac:
-  # Apple Silicon（arm64），不签名：家人首次右键「打开」绕过 Gatekeeper「未验证开发者」拦截。
+  # Apple Silicon（arm64）。
   target:
     - target: dmg
       arch:
         - arm64
-  # 不签名：identity 显式置 null，electron-builder 跳过 codesign（否则会在 Mac 上找签名身份并报错）。
+  # identity: null = 跳过开发者 ID 签名与公证；但必须用 afterPack 做 ad-hoc 重签，
+  # 否则 Electron 官方二进制的 adhoc 签名与打包后的 bundle 资源不匹配，
+  # macOS 14+ 会判「应用已损坏，无法打开」（右键也无效）。
   identity: null
+  # 打包后、出 dmg 前对整个 app 做 ad-hoc 重签（scripts/after-pack.cjs）。
+  afterPack: scripts/after-pack.cjs
   # Mac 需要 .icns 图标：先在 Mac 上跑 scripts/make-icns.sh 生成 build/icon.icns。
   # （electron-builder 也接受 512x512+ 的 PNG 并自动转 icns，但 256 的 build/icon.png 偏小，建议先生成 icns。）
   icon: build/icon.icns
