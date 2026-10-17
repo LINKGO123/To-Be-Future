@@ -26,6 +26,9 @@ extraResources:
 
 asar: true
 
+# 打包后、出 dmg 前对整个 app 做 ad-hoc 重签（顶层 hook，修复 macOS 14+「应用已损坏」）
+afterPack: scripts/after-pack.cjs
+
 win:
   # 内层 exe 用 ASCII 名，避免中文/空格可执行文件名在 NSIS 安装器里出问题。
   # productName 保留中文用于展示与快捷方式；这里只改可执行文件名（安装后为 fund-radar.exe）。
@@ -47,8 +50,6 @@ mac:
   # 否则 Electron 官方二进制的 adhoc 签名与打包后的 bundle 资源不匹配，
   # macOS 14+ 会判「应用已损坏，无法打开」（右键也无效）。
   identity: null
-  # 打包后、出 dmg 前对整个 app 做 ad-hoc 重签（scripts/after-pack.cjs）。
-  afterPack: scripts/after-pack.cjs
   # Mac 需要 .icns 图标：先在 Mac 上跑 scripts/make-icns.sh 生成 build/icon.icns。
   # （electron-builder 也接受 512x512+ 的 PNG 并自动转 icns，但 256 的 build/icon.png 偏小，建议先生成 icns。）
   icon: build/icon.icns
